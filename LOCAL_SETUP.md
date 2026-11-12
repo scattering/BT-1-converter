@@ -1,13 +1,13 @@
 # Local Mac project
 
-Project folder: `/Users/williamratcliff/Documents/Codex/bt1-converter`.
+Project folder: `/Users/williamratcliff/bt1-converter`.
 Open this folder as a local project in Codex. AGENTS.md supplies the project
 instructions. The folder has a local Git repository; no remote is configured.
 
 ## Run
 
 ```sh
-cd /Users/williamratcliff/Documents/Codex/bt1-converter
+cd /Users/williamratcliff/bt1-converter
 source .venv/bin/activate
 python bt1convert.py --help
 python bt1convert.py inspect /path/to/scan.bt1

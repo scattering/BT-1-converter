@@ -3,7 +3,7 @@
   "release_version": "0.3.0",
   "release_directory": "/Users/williamratcliff/Documents/Codex/2026-11-03/task-4/bt1-modern-v0.3.0",
   "release_manifest_sha256": "34a0618a3188fe0373305bcafc055ee17c2d4af341a7b50d7bc0371139167932",
-  "destination": "/Users/williamratcliff/Documents/Codex/bt1-converter",
+  "destination": "/Users/williamratcliff/bt1-converter",
   "scope": "Pure-Python runtime, tests and harnesses unchanged; local project setup and evidence links added. Historical data and binaries not copied.",
   "files": {
     ".gitignore": {
@@ -16,7 +16,7 @@
       "added_for_local_project": true
     },
     "LOCAL_SETUP.md": {
-      "project_sha256": "b2268dd4499a7084628f44223288658cee19c4f048f87821f4b608d5d51ff96f",
+      "project_sha256": "c5b5df65f0d6a7d2c45e754fa4525cbd8ff730246f0decaf02dc228122e2a561",
       "added_for_local_project": true
     },
     "Makefile": {
@@ -143,5 +143,10 @@
       "release_sha256": "2fe53255aac576edd9d505f67ebaa7f941b4b4d5e29815093eed24ed74562a3a",
       "unchanged_from_release": true
     }
+  },
+  "relocation": {
+    "from": "/Users/williamratcliff/Documents/Codex/bt1-converter",
+    "to": "/Users/williamratcliff/bt1-converter",
+    "at_utc": "2026-11-12T18:49:22.092084+00:00"
   }
 }
