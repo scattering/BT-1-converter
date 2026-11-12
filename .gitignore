@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+outputs/
+.venv/
+.DS_Store
+artifacts/
+data/
+.env.local
+*.bt1
+*.raw
+*.gsas
+*.covariance.npz

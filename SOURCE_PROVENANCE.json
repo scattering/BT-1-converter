@@ -1,0 +1,147 @@
+{
+  "created_utc": "2026-11-12T18:43:12.813939+00:00",
+  "release_version": "0.3.0",
+  "release_directory": "/Users/williamratcliff/Documents/Codex/2026-11-03/task-4/bt1-modern-v0.3.0",
+  "release_manifest_sha256": "34a0618a3188fe0373305bcafc055ee17c2d4af341a7b50d7bc0371139167932",
+  "destination": "/Users/williamratcliff/Documents/Codex/bt1-converter",
+  "scope": "Pure-Python runtime, tests and harnesses unchanged; local project setup and evidence links added. Historical data and binaries not copied.",
+  "files": {
+    ".gitignore": {
+      "project_sha256": "8e624e8965c5d480f33fb2928d4ee0987cc93ca08ca257abcb345b6e258762ab",
+      "release_sha256": "5ed4d6fd33faaeb434862297df9f05dbf08584851084a85b1d7332ba5e1ce0ac",
+      "unchanged_from_release": false
+    },
+    "AGENTS.md": {
+      "project_sha256": "55eec36e2d99e50f102753937e3555a3c08d0b3f1cf93cfb7cd1bc70e7e5835a",
+      "added_for_local_project": true
+    },
+    "LOCAL_SETUP.md": {
+      "project_sha256": "b2268dd4499a7084628f44223288658cee19c4f048f87821f4b608d5d51ff96f",
+      "added_for_local_project": true
+    },
+    "Makefile": {
+      "project_sha256": "965f40fea316a7ff61dea2407551ce3a7f05b0ebed6a188284b5c847f7572aff",
+      "added_for_local_project": true
+    },
+    "PYTHON_MODES.md": {
+      "project_sha256": "85cb4e3128a8a09b578f1f56d45cd1dc169bd8972c3506181bba829abe103d80",
+      "release_sha256": "85cb4e3128a8a09b578f1f56d45cd1dc169bd8972c3506181bba829abe103d80",
+      "unchanged_from_release": true
+    },
+    "PYTHON_VALIDATION.md": {
+      "project_sha256": "bd6798c1f067d449202836ac0b6aecabf2543b6868c5c4e3a8178a7bc69c26db",
+      "release_sha256": "a846adfa701dd64a4a3d92f665ec6a4c6399ca1b09b5af8ad8527876714c43f6",
+      "unchanged_from_release": false
+    },
+    "README.md": {
+      "project_sha256": "292fd73cac49385c91742b2c03ddf27c87b118b9d4e1076f08beddd15bd55613",
+      "release_sha256": "e9d6071c9fa4448c87bb8c95f95bdbbce52c4679094c6d0575d48f4e9ac21e93",
+      "unchanged_from_release": false
+    },
+    "VALIDATION.md": {
+      "project_sha256": "39b4244a1efa4f8b5bf6da6cb7ada19f82c6658a7b649ca2265b6a4a01f69ded",
+      "release_sha256": "932a751788c6edb43bfee1afbca4a76b79f9cd32e3012b7c9ef2283e80b9ef5e",
+      "unchanged_from_release": false
+    },
+    "bt1convert.py": {
+      "project_sha256": "6a5737d9f206e676c1decd6dece6c96c3f7bfc31769933dda6ff4b3fa3f5a64e",
+      "release_sha256": "6a5737d9f206e676c1decd6dece6c96c3f7bfc31769933dda6ff4b3fa3f5a64e",
+      "unchanged_from_release": true
+    },
+    "bt1modern/__init__.py": {
+      "project_sha256": "1ea66b6f4eef54b3d9bc88aaac94c5ed0975807599755f384e0a689d64f5e68a",
+      "release_sha256": "1ea66b6f4eef54b3d9bc88aaac94c5ed0975807599755f384e0a689d64f5e68a",
+      "unchanged_from_release": true
+    },
+    "bt1modern/__main__.py": {
+      "project_sha256": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d",
+      "release_sha256": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d",
+      "unchanged_from_release": true
+    },
+    "bt1modern/cli.py": {
+      "project_sha256": "7f5acd9708d025b9c7fe130036fe0bbb8313073338a3ec77211f7e0c44b9df45",
+      "release_sha256": "7f5acd9708d025b9c7fe130036fe0bbb8313073338a3ec77211f7e0c44b9df45",
+      "unchanged_from_release": true
+    },
+    "bt1modern/gsas.py": {
+      "project_sha256": "79b0571b58f93fc403e009fe6f8dce370872e222266143830036a4a5b8a34fc4",
+      "release_sha256": "79b0571b58f93fc403e009fe6f8dce370872e222266143830036a4a5b8a34fc4",
+      "unchanged_from_release": true
+    },
+    "bt1modern/io.py": {
+      "project_sha256": "62d716b4da10a2c7e62374ca018dfd9a12926824bb0fbff82deb17a52697050b",
+      "release_sha256": "62d716b4da10a2c7e62374ca018dfd9a12926824bb0fbff82deb17a52697050b",
+      "unchanged_from_release": true
+    },
+    "bt1modern/legacy.py": {
+      "project_sha256": "ea46dba36416606a141bb5a453e8915d90d0f9b55caac2a56e00ec2a5ab341be",
+      "release_sha256": "ea46dba36416606a141bb5a453e8915d90d0f9b55caac2a56e00ec2a5ab341be",
+      "unchanged_from_release": true
+    },
+    "bt1modern/reduce.py": {
+      "project_sha256": "b1a0483f010840f7a090c36b8434986825a3e7c019b90cfa40f9ea81766db279",
+      "release_sha256": "b1a0483f010840f7a090c36b8434986825a3e7c019b90cfa40f9ea81766db279",
+      "unchanged_from_release": true
+    },
+    "pyproject.toml": {
+      "project_sha256": "5730a54efb8d15721063510e1cbb099f8a49372404c4424dacdecb5ce1a16c99",
+      "release_sha256": "5730a54efb8d15721063510e1cbb099f8a49372404c4424dacdecb5ce1a16c99",
+      "unchanged_from_release": true
+    },
+    "tests/test_cli_python_modes.py": {
+      "project_sha256": "0ea28c24f28d5099e462bd40f6725bfc86aeb3df8fea9468c1502d88ffde6cb9",
+      "release_sha256": "0ea28c24f28d5099e462bd40f6725bfc86aeb3df8fea9468c1502d88ffde6cb9",
+      "unchanged_from_release": true
+    },
+    "tests/test_cli_safety.py": {
+      "project_sha256": "b37c28daa5a0ace10ffdfb59d613d13bd308d01897b51a3a57b56a8cb30dde54",
+      "release_sha256": "b37c28daa5a0ace10ffdfb59d613d13bd308d01897b51a3a57b56a8cb30dde54",
+      "unchanged_from_release": true
+    },
+    "tests/test_gsas.py": {
+      "project_sha256": "2758f701ab33163f8963580c7fa8e31e256eb157344b364275f628310c93bb59",
+      "release_sha256": "2758f701ab33163f8963580c7fa8e31e256eb157344b364275f628310c93bb59",
+      "unchanged_from_release": true
+    },
+    "tests/test_io.py": {
+      "project_sha256": "357340a66223539d8da4dfde416434edf4617dd1a975115c43b7ca37e0a210d7",
+      "release_sha256": "357340a66223539d8da4dfde416434edf4617dd1a975115c43b7ca37e0a210d7",
+      "unchanged_from_release": true
+    },
+    "tests/test_legacy_kernel.py": {
+      "project_sha256": "9ea581f4fc8bb861541234aa623db5b7998f580c6de1362d9cbb60b1405c8b2e",
+      "release_sha256": "9ea581f4fc8bb861541234aa623db5b7998f580c6de1362d9cbb60b1405c8b2e",
+      "unchanged_from_release": true
+    },
+    "tests/test_native_serialization.py": {
+      "project_sha256": "be658137e97274db33b2d42d0d9fc2bbb711fc8b5e2cd3add31d4ecbf159ce15",
+      "release_sha256": "be658137e97274db33b2d42d0d9fc2bbb711fc8b5e2cd3add31d4ecbf159ce15",
+      "unchanged_from_release": true
+    },
+    "tests/test_python_legacy_differential.py": {
+      "project_sha256": "b80e6ce3c1188152fa3e8d125ac8dfd0039cd3f81de6946eff8cd293e349f920",
+      "release_sha256": "b80e6ce3c1188152fa3e8d125ac8dfd0039cd3f81de6946eff8cd293e349f920",
+      "unchanged_from_release": true
+    },
+    "tests/test_python_legacy_io.py": {
+      "project_sha256": "3e8eb8dfb53add3abc47dfc54a200bd15176f6f29c7f933c94102043c1c6ac20",
+      "release_sha256": "3e8eb8dfb53add3abc47dfc54a200bd15176f6f29c7f933c94102043c1c6ac20",
+      "unchanged_from_release": true
+    },
+    "tests/tests_reduce.py": {
+      "project_sha256": "99ea3f48ef0815c4ef4ace08275e6cb5c3052805268a9362b2ea6aea34c8a347",
+      "release_sha256": "99ea3f48ef0815c4ef4ace08275e6cb5c3052805268a9362b2ea6aea34c8a347",
+      "unchanged_from_release": true
+    },
+    "validate_gsasii.py": {
+      "project_sha256": "f7c6d82d689d443d4a1a0ce6be8431f194ea687878cb8c8ebce6e53b6af5bb83",
+      "release_sha256": "f7c6d82d689d443d4a1a0ce6be8431f194ea687878cb8c8ebce6e53b6af5bb83",
+      "unchanged_from_release": true
+    },
+    "validate_python_legacy.py": {
+      "project_sha256": "2fe53255aac576edd9d505f67ebaa7f941b4b4d5e29815093eed24ed74562a3a",
+      "release_sha256": "2fe53255aac576edd9d505f67ebaa7f941b4b4d5e29815093eed24ed74562a3a",
+      "unchanged_from_release": true
+    }
+  }
+}
