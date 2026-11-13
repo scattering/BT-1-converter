@@ -59,7 +59,7 @@ function currentOptions(combine = false) {
   };
 }
 function controls() {
-  for (const element of document.querySelectorAll('button,input,select')) element.disabled = busy;
+  for (const element of document.querySelectorAll('button:not([data-navigation]):not([data-help]),input,select')) element.disabled = busy;
   const selected = selectedScans();
   for (const id of ['ncnr-load', 'quick-convert', 'files', 'validate', 'probe', 'diagnostics', 'example']) byId(id).disabled = busy || !runtimeReady;
   byId('convert').disabled = busy || !runtimeReady || !selected.length;
@@ -348,6 +348,107 @@ async function convertSelection(combine = false) {
   });
   return converted;
 }
+
+// Help stays available while computation runs. Tooltip text is associated with
+// a focusable button, supports pointer/touch/keyboard use, and escapes table clipping.
+let activeTooltip = null;
+let tooltipTimer;
+function closeTooltip() {
+  clearTimeout(tooltipTimer);
+  if (activeTooltip) activeTooltip.tip.hidden = true;
+  activeTooltip = null;
+}
+function showTooltip(button, tip, pinned = false) {
+  clearTimeout(tooltipTimer);
+  if (activeTooltip?.tip !== tip) closeTooltip();
+  activeTooltip = { button, tip, pinned: pinned || Boolean(activeTooltip?.tip === tip && activeTooltip.pinned) };
+  tip.hidden = false;
+  const bounds = button.getBoundingClientRect();
+  const box = tip.getBoundingClientRect();
+  const left = Math.max(12, Math.min(bounds.left, innerWidth - box.width - 12));
+  const below = bounds.bottom + 8;
+  const top = below + box.height <= innerHeight - 12 ? below : Math.max(12, bounds.top - box.height - 8);
+  tip.style.left = `${left}px`; tip.style.top = `${top}px`;
+}
+function helpButton(label, description) {
+  const button = document.createElement('button'); button.type = 'button'; button.className = 'help-tip'; button.dataset.help = '';
+  button.textContent = '?'; button.setAttribute('aria-label', `About ${label}`);
+  const tip = document.createElement('span'); tip.className = 'help-tooltip'; tip.setAttribute('role', 'tooltip'); tip.hidden = true;
+  tip.id = `help-${document.querySelectorAll('[role="tooltip"]').length + 1}`;
+  tip.textContent = description; button.setAttribute('aria-describedby', tip.id); document.body.append(tip);
+  button.addEventListener('focus', () => showTooltip(button, tip));
+  button.addEventListener('pointerenter', () => showTooltip(button, tip));
+  button.addEventListener('click', event => { event.preventDefault(); showTooltip(button, tip, true); });
+  const scheduleClose = () => {
+    clearTimeout(tooltipTimer);
+    tooltipTimer = setTimeout(() => {
+      if (!activeTooltip?.pinned && document.activeElement !== button && !button.matches(':hover') && !tip.matches(':hover') && activeTooltip?.tip === tip) closeTooltip();
+    }, 160);
+  };
+  button.addEventListener('blur', () => { if (activeTooltip?.button === button) activeTooltip.pinned = false; scheduleClose(); }); button.addEventListener('pointerleave', scheduleClose);
+  tip.addEventListener('pointerenter', () => clearTimeout(tooltipTimer)); tip.addEventListener('pointerleave', scheduleClose);
+  return button;
+}
+function setupHelpAndTabs() {
+  const tabs = [byId('tab-workspace'), byId('tab-documentation')];
+  function selectTab(tab, focus = false, updateURL = true) {
+    closeTooltip();
+    for (const candidate of tabs) {
+      const selected = candidate === tab;
+      candidate.setAttribute('aria-selected', String(selected)); candidate.tabIndex = selected ? 0 : -1;
+      byId(candidate.getAttribute('aria-controls')).hidden = !selected;
+    }
+    if (focus) tab.focus();
+    if (updateURL) history.replaceState(null, '', `${location.pathname}${location.search}#${tab === tabs[1] ? 'documentation' : 'workspace'}`);
+  }
+  for (const [index, tab] of tabs.entries()) {
+    tab.addEventListener('click', () => selectTab(tab));
+    tab.addEventListener('keydown', event => {
+      let next;
+      if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
+      else if (event.key === 'ArrowLeft') next = (index + tabs.length - 1) % tabs.length;
+      else if (event.key === 'Home') next = 0;
+      else if (event.key === 'End') next = tabs.length - 1;
+      if (next !== undefined) { event.preventDefault(); selectTab(tabs[next], true); }
+    });
+  }
+  selectTab(location.hash === '#documentation' ? tabs[1] : tabs[0], false, false);
+  window.addEventListener('hashchange', () => {
+    if (location.hash === '#documentation' || location.hash === '#workspace') selectTab(location.hash === '#documentation' ? tabs[1] : tabs[0], false, false);
+  });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape' && activeTooltip) { event.preventDefault(); closeTooltip(); } });
+  document.addEventListener('pointerdown', event => { if (activeTooltip && !activeTooltip.button.contains(event.target) && !activeTooltip.tip.contains(event.target)) closeTooltip(); });
+  window.addEventListener('resize', closeTooltip);
+  window.addEventListener('scroll', closeTooltip, true);
+  const headers = document.querySelectorAll('#scan-list').item(0).closest('table').querySelectorAll('thead th');
+  const columnHelp = [
+    [2, 'sample description', 'The original acquisition description is retained. Similar temperatures or matching settings do not prove that scans contain the same sample or measurement state.'],
+    [3, 'measured temperature', 'Mean and minimum–maximum of the recorded temperature measurements, in kelvin. These are not the nominal temperature in the sample description or the temperature setpoint.'],
+    [4, 'monochromator', 'The recorded monochromator, wavelength λ in ångströms and collimation in arcminutes. Matching detector corrections does not validate an instrument resolution profile.'],
+    [5, 'planned M4 range', 'Planned motor start → stop and step, in degrees. M4 is not the full multi-detector 2θ range or the final GSAS range. A partial scan may cover only a prefix of this plan.'],
+    [6, 'acquisition date and time', 'Header date and terminal end marker are shown as recorded, with no established timezone. These files do not record a precise start time; archive updates are never used to infer one.'],
+    [7, 'archive update time', 'When the archive reports this file was last modified, displayed in US Eastern time. This is a separate event from acquisition start or end. Local inputs have no archive timestamp.'],
+    [8, 'acquisition completeness', 'Complete means all planned acquisition points are present. Partial means an incomplete recorded prefix. Prepared RAW files cannot establish acquisition completeness.'],
+  ];
+  for (const [index, label, text] of columnHelp) headers[index].append(helpButton(label, text));
+  const controlHelp = [
+    ['mode', 'calculation mode', 'Correct uses float64 and enclosing measured intervals. Legacy preserves historical float32 arithmetic, snapping, masks and endpoints, then writes integer GSAS values. Both run in Python and NumPy.'],
+    ['uncertainty', 'uncertainty policy', 'Independent propagation uses squared interpolation weights for variances. Legacy-linear interpolates sigma. This choice is separate from calculation mode; changing it does not change geometry or the float32/float64 precision.'],
+    ['method', 'sampling method', 'Interpolate uses eligible neighbouring observations. Nearest assigns measured observations to nearest grid bins; overlaps can still be combined. Endpoint and mask rules depend on the selected mode.'],
+    ['covariance', 'conditional covariance', 'Correct + independent only. The NPZ factor describes correlations from shared observations with observed variances and averaging weights held fixed. GSAS fitting does not automatically use it; monitor and calibration uncertainties are not included.'],
+    ['partial', 'partial acquisition', 'Opt in only to a valid incomplete acquisition prefix in correct mode. Missing interior rows are not invented, and outputs remain labelled Partial snapshot. Legacy requires complete BT-1 scans.'],
+    ['combine-name', 'combined output name', 'Names the combined output files. Start with a letter or digit and use only letters, digits, underscores, dots or hyphens. Inputs are prepared separately before their estimates are combined.'],
+    ['allow-mixed-temperature', 'mixed-temperature acknowledgement', 'The converter normally refuses mean temperatures differing by more than 1 K. Check this only after reviewing sample/state compatibility. Instrument checks remain active. This is separate from the tighter 0.2 K suggestion rule.'],
+  ];
+  for (const [id, label, text] of controlHelp) {
+    const control = byId(id); const original = control.closest('label');
+    const wrapper = document.createElement('div'); wrapper.className = original.classList.contains('check') ? 'help-check' : 'help-field';
+    original.parentNode.insertBefore(wrapper, original); wrapper.append(original, helpButton(label, text));
+  }
+  byId('combine-suggestions').querySelector('h3').append(helpButton('suggested combinations', 'Complete scans with matching recorded settings and detector calibration are grouped only when the full spread of measured scan means is at most 0.2 K. Review sample identity and within-scan drift. Selecting a suggestion never converts.'));
+  byId('results-heading').append(helpButton('output files', 'GSAS contains the uniform pattern; CSV retains pre-formatting values; JSON records provenance, masks and policies. BT-1 inputs also produce prepared RAW. Correct independent mode can additionally export conditional covariance as NPZ.'));
+}
+setupHelpAndTabs();
 
 // Data-specific partial/mixed-temperature acknowledgements reset on page load.
 const prefFields = ['mode', 'uncertainty', 'method', 'covariance', 'combine-name'];

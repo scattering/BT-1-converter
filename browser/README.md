@@ -73,6 +73,15 @@ correct mode and independent uncertainty. An incomplete contiguous prefix
 requires the explicit correct-mode option; legacy conversion requires complete
 BT-1 acquisitions. The existing CLI validates incompatible choices.
 
+The new **Workspace** and **Documentation** tabs keep guidance available while
+the runtime loads or a conversion runs, without resetting scans, settings or
+results. Keyboard users can move between tabs with arrow keys, Home and End.
+Field help buttons provide explanations such as M4 and uncertainty choices;
+Escape closes the open help. Local Chrome checks passed for direct
+`#documentation` navigation, keyboard/help interactions and switching tabs
+during a successful conversion. This help revision is not yet verified on the
+public site; the initial deployment results below remain a separate record.
+
 The server binds only `127.0.0.1`, disables directory listings, and serves only
 the harness, Python modules/tests, runtime assets and validation inputs/reports.
 Browser evidence is written to the local project through a bounded JSON endpoint
@@ -83,14 +92,14 @@ uploaded files. Stop the server with Ctrl-C when finished.
 
 The connected repository is
 [scattering/BT-1-converter](https://github.com/scattering/BT-1-converter).
-The configured Pages address is
+The live Pages address is
 [https://scattering.github.io/BT-1-converter/](https://scattering.github.io/BT-1-converter/).
-**Pages is configured for GitHub Actions; the initial publication is pending.**
-The tested implementation is committed locally as `5cb0922`. Publication is
-currently blocked because the locked 1Password SSH agent could not sign the
-GitHub push. The SSH remote and credentials have not been changed. Unlocking
-1Password and approving its existing GitHub key is the next action before
-retrying the push. This configured URL is not yet evidence of a live deployment.
+**Published and verified in Chrome on November 12, 2026, approximately
+8:56–8:59 PM EST.**
+[Deployment run 43348393458](https://github.com/scattering/BT-1-converter/actions/runs/43348393458)
+succeeded for source commit `2e7de03`, containing implementation commit
+`5cb0922`. The deployed build manifest matches the locally tested artifact.
+The authorized SSH push succeeded using the existing 1Password setup.
 
 Build and preview the public artifact locally:
 
@@ -127,7 +136,10 @@ is scoped to the origin, so localhost and GitHub Pages have separate caches;
 browser eviction/private browsing can also limit persistence. Download files
 for long-term storage. Chrome reload testing of the production build restored
 seven inputs and two results (about 1.1 MiB) with working download links.
-Local RAW upload and legacy conversion, explicit partial-scan refusal/opt-in, and suggestion selection were verified in Chrome. Public-deployment checks remain pending.
+Local RAW upload/legacy conversion and explicit partial-scan refusal/opt-in
+were verified in Chrome. Live-site testing also verified suggestion selection,
+conversion/download, and restoration of seven inputs and two results after
+reload on the public origin.
 
 ## Browser filesystem adapter
 
@@ -225,8 +237,16 @@ points. Selecting `Mn5Si002.bt1` plus `Mn5Si001.bt1` produced the named
 `Mn5Si_low_temperature` combination, one bank/3300 points and five download
 files. A `Mn5Si002.bt1` + `Mn5Si006.bt1` combination was refused for mixed
 temperature without an explicit override. Reload restored all seven inputs
-and both result sets from IndexedDB. These local production-preview checks do
-not establish that the public deployment has completed.
+and both result sets from IndexedDB.
+
+The deployed site was then tested independently in Chrome. Runtime loading and
+direct NCNR retrieval verified all seven source hashes. The latest complete
+scan `Mn5Si006.bt1` produced one bank/3300 points and four output files. A normal
+browser download was parsed natively and had the same SHA-256 as the validated
+local GSAS output. Selecting the suggested `Mn5Si002.bt1`/`Mn5Si001.bt1` group
+did not itself run a conversion; an explicit combined conversion produced
+`Mn5Si_low_temperature`, one bank/3300 points and five outputs. Reload restored
+seven inputs and two results (about 1.1 MiB) from the public origin's IndexedDB.
 
 ## Direct NCNR retrieval
 
@@ -243,6 +263,11 @@ separately in default correct/independent mode. Each produced **3300 valid
 points and one GSAS bank**, with RAW/GSAS/CSV/JSON output available. Their
 recorded mean temperatures were approximately 80 K and 250 K; they were not
 combined. Evidence is in `ncnr-complete-browser.json`.
+
+During the live-site check on November 12, `Mn5Si007.bt1` was an incomplete
+**174/201-point snapshot**, with NCNR modification time **8:54:45 PM EST**.
+The quick conversion therefore chose complete `Mn5Si006.bt1`. These are
+observed snapshots; the growing acquisition may change after this check.
 
 A catalog entry being newest does not establish a complete acquisition. The
 UI inspects scan completeness and keeps incomplete prefixes distinct; partial

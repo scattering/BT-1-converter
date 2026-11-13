@@ -1,6 +1,6 @@
 # BT-1 reduction / Pyodide handoff
 
-Updated 2026-11-12 (US Eastern).
+Updated 2026-11-12 after live verification around 8:56–8:59 PM EST.
 
 ## Starting point
 
@@ -9,8 +9,8 @@ not a new rewrite. It contains the validated v0.3.0 pure-Python port of
 PROPREP/GFORMAT. Read `AGENTS.md`, `README.md`, `PYTHON_MODES.md`, and
 `LOCAL_SETUP.md` before changing it. `SOURCE_PROVENANCE.json` records imported
 source hashes. Native scientific baseline commit: `5f0e366` (relocation to user
-home). The tested browser implementation is committed locally as `5cb0922`;
-the scientific modules remain unchanged from that baseline.
+home). Browser implementation commit `5cb0922` was published through source
+commit `2e7de03`; the scientific modules remain unchanged from that baseline.
 The former `/Users/williamratcliff/Documents/Codex/bt1-converter` location is
 obsolete. The local environment was recreated after the move.
 
@@ -123,8 +123,26 @@ produced one bank/3300 points and five downloads. Mixed-temperature
 
 IndexedDB caching with memory fallback is implemented, with preferences in
 localStorage. Reload testing restored seven inputs and two results (about
-1.1 MiB) and their download links. Local RAW upload/legacy conversion and explicit partial-scan refusal/opt-in were verified. Live public-site checks remain pending. No acquisition data is sent to a conversion
-server; download copies remain the durable export.
+1.1 MiB) and their download links. Local RAW upload/legacy conversion and
+explicit partial-scan refusal/opt-in were verified. No acquisition data is
+sent to a conversion server; download copies remain the durable export.
+
+Live Chrome verification at the public Pages URL confirmed runtime loading,
+direct NCNR fetch with all seven SHA-256 values verified, and quick conversion
+of complete `Mn5Si006.bt1` to one bank/3300 points/four outputs. A normal browser
+download of the Mn5Si006 GSAS file parsed natively as one bank/3300 points
+and matched the validated local output SHA-256. Selecting the suggested
+`Mn5Si002.bt1`/`Mn5Si001.bt1` group did not trigger another conversion;
+explicit combination named `Mn5Si_low_temperature` produced one bank/3300
+points/five outputs. Public-site reload restored seven inputs and two results
+(about 1.1 MiB) from IndexedDB. The observed `Mn5Si007.bt1` snapshot was partial,
+174/201 points, modified November 12 at 8:54:45 PM EST; later snapshots may grow.
+
+The follow-up Workspace/Documentation tabs and accessible field help passed
+local Chrome checks: direct `#documentation` loading, arrow/Home/End navigation,
+help open/Escape close, and documentation access during runtime loading and
+conversion without losing workspace state. This follow-up UI is not yet
+verified publicly; the initial deployed version is recorded below.
 
 ## GitHub and publishing status
 
@@ -132,16 +150,17 @@ The user authorized connecting this checkout and publishing its browser app to
 `https://github.com/scattering/BT-1-converter`. `origin` is the SSH URL
 `git@github.com:scattering/BT-1-converter.git`. Existing 1Password SSH
 authentication and `git fetch origin` succeeded; no keys/config were changed.
-The public repository was empty at inspection, with `main` as default branch.
+The repository's default branch is `main`. The authorized push succeeded using
+the existing SSH/1Password setup; the earlier locked-agent blocker is resolved.
 
-Root configured GitHub Pages with `build_type: workflow`. Configured address:
-`https://scattering.github.io/BT-1-converter/`. **Publishing is pending; this is
-not yet an observed live deployment.** The implementation commit `5cb0922` is
-ready locally, but the initial push is blocked by locked 1Password SSH signing.
-Earlier read-only authentication/fetch succeeded; subsequent push/auth signing
-attempts failed while 1Password was locked. The user has been asked to unlock
-1Password and approve its existing GitHub key. Preserve the SSH remote and
-credentials; no remote rewrite or alternate authentication workaround is needed.
+GitHub Pages uses `build_type: workflow` and is **deployed and verified live** at
+[https://scattering.github.io/BT-1-converter/](https://scattering.github.io/BT-1-converter/).
+[Run 43348393458](https://github.com/scattering/BT-1-converter/actions/runs/43348393458)
+successfully built/deployed source `2e7de03` (implementation `5cb0922`). The
+initial deployment used manual workflow dispatch. The public build manifest
+matches local `dist/`, and HTML/worker/WASM requests returned HTTP 200 with
+the expected MIME types. Chrome interaction checks above ran around
+8:56–8:59 PM EST on November 12, 2026.
 
 `.github/workflows/pages.yml` runs grouping tests, installs the verified runtime,
 builds a static artifact, uploads and deploys it. It triggers on changes to
@@ -153,20 +172,16 @@ not committed.
 browser adapter and pinned runtime, excluding fixtures/reports/acquisition
 archives. Public `build-info.json` records hashes without local source paths.
 
-## Continue here
+## Future maintenance
 
-1. After the user unlocks/approves 1Password, retry the authorized SSH push of
-   `main`. Root owns publishing and any final documentation commit. Follow the
-   SSH skill status/command checks; never force-push or expose credentials.
-2. Observe the Pages workflow through completion, then test the public site.
-   Local production-preview upload, partial-scan, combination, download, cache
-   reload, and suggestion-selection checks are already complete. The production
-   config uses relative URLs and disables local validation/evidence endpoints.
-3. Record the deployed commit/URL and observed public-site checks in the docs
-   and durable ignored artifacts. Replace the pending/auth-blocked status only
-   after observing success.
-4. Preserve the diagnosed one-ULP result and explicit test omissions. Do not
-   modify scientific algorithms or thresholds merely to make exact parity green.
+The initial installation, browser validation, recorded UI checks and first public
+deployment are complete. Preserve the diagnosed one-ULP result and explicit
+test omissions; do not modify algorithms or thresholds merely to make exact
+parity green. For future code changes, rebuild/retest the affected behavior,
+observe the Pages workflow, and record the deployed commit and public checks.
+Keep original acquisitions and source archives read-only and generated evidence
+outside Git. The production configuration uses relative URLs and disables
+local validation/evidence endpoints.
 
 Exact installation/preparation/serving/build commands and scope details are in
 `browser/README.md`. The native baseline and browser evidence are distinct.
