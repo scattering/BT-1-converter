@@ -72,6 +72,42 @@ class DownloadTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "every selected input"):
             self.finalize([summary])
 
+    def test_per_scan_cutoffs_must_match_prepared_input_metadata(self):
+        summary = self.pattern("combined", self.inputs)
+        metadata = self.output / "combined.json"
+        record = json.loads(metadata.read_text())
+        cutoffs = {str(self.inputs[0]): 1.0, str(self.inputs[1]): 1.9}
+        for source in record["inputs"]:
+            source["header"] = {"preparation": {"cutoff_m4_degrees": cutoffs[source["path"]]}}
+        metadata.write_text(json.dumps(record))
+        result = finalize_outputs(self.output, self.inputs, [summary],
+                                  combine_name="combined", expected_cutoffs=cutoffs)
+        self.assertEqual(result[0]["fullprof"]["points"], 2)
+
+    def test_ignored_or_wrong_cutoff_prevents_downloads(self):
+        summary = self.pattern("combined", self.inputs)
+        metadata = self.output / "combined.json"
+        record = json.loads(metadata.read_text())
+        cutoffs = {str(p): 1.9 for p in self.inputs}
+        for source in record["inputs"]:
+            source["header"] = {"preparation": {"cutoff_m4_degrees": 1.0}}
+        metadata.write_text(json.dumps(record))
+        with self.assertRaisesRegex(ValueError, "applied M4 cutoff"):
+            finalize_outputs(self.output, self.inputs, [summary],
+                             combine_name="combined", expected_cutoffs=cutoffs)
+        self.assertFalse((self.output / "combined.dat").exists())
+
+    def test_cutoff_request_rejects_missing_extra_and_invalid_values(self):
+        summary = self.pattern("combined", self.inputs)
+        valid = {str(p): 1.9 for p in self.inputs}
+        invalid_requests = [{}, {**valid, str(self.root / "other.bt1"): 1.9}]
+        invalid_requests.extend({**valid, str(self.inputs[0]): value}
+                                for value in (None, "1.9", True, -1, float("nan"), float("inf")))
+        for request in invalid_requests:
+            with self.subTest(request=request), self.assertRaisesRegex(ValueError, "Cutoff request"):
+                finalize_outputs(self.output, self.inputs, [summary],
+                                 combine_name="combined", expected_cutoffs=request)
+
     def test_changed_input_is_rejected(self):
         summary = self.pattern("combined", self.inputs)
         self.inputs[1].write_text("changed input")

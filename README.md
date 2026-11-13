@@ -14,7 +14,8 @@ configuration). The browser identifies combined pattern downloads separately
 from individual prepared RAW files, verifies input provenance before offering
 downloads, and adds a FullProf XYDATA `.dat` export. Its no-interpolation/gap
 policy and FullProf reader weighting limitations are documented there. The
-Python scientific modules remain unchanged.
+Python preparation and reduction algorithms remain unchanged; the CLI now also
+accepts per-input cutoff overrides for the browser's per-scan controls.
 
 Both **correct** and **legacy** modes execute entirely in Python and NumPy. No
 compiler, Fortran executable, subprocess, network or authentication is used for
@@ -147,7 +148,29 @@ ordered 32-detector grids and calibrations because the historical indexing assum
 the first file's bank origins.
 
 `--cutoff 1` is the default; older instructions used 3 degrees. Confirm the
-appropriate low-angle acceptance. `--keep-detector1` and repeated
+appropriate low-angle acceptance. The cutoff uses the acquisition's **M4 motor
+angle in degrees for detectors 1–3**, not a lower bound on the final pattern's
+2θ axis. For example, `--cutoff 1.9` selects the requested direct-beam cut for
+all BT-1 inputs. The browser exposes this per scan and can apply a value to
+selected BT-1 scans together; new scans still start at 1°.
+
+The CLI also accepts repeatable per-input overrides:
+
+```sh
+python3 bt1convert.py convert /path/Mn5Si001.bt1 /path/Mn5Si002.bt1 \
+  --cutoff 1 --input-cutoff /path/Mn5Si001.bt1=1.9 \
+  --mode correct --combine low_temperature --out-dir outputs/combined_cutoff
+```
+
+Each override must name one of the selected BT-1 inputs. Prepared RAW files
+cannot be cut again through this option. Every input's preparation metadata
+records its requested cutoff and the number of leading points removed per bank.
+Correct mode accepts differing prepared starts; legacy combination still
+requires identical per-detector grids and calibrations. Apply compatible
+cutoffs to matching acquisitions, convert separately, or explicitly choose
+correct mode when the prepared grids differ. No cutoff is silently changed.
+
+`--keep-detector1` and repeated
 `--drop-detector N` select preparation masks. Correct mode can explicitly reduce a
 contiguous incomplete prefix with `--allow-partial`; legacy mode requires complete
 BT-1 acquisition. Neither mode fills missing interior acquisition rows.

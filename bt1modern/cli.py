@@ -19,6 +19,7 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -120,6 +121,36 @@ def _resolve_mode_options(args):
         raise ValueError('--covariance requires --uncertainty independent')
 
 
+def _input_cutoffs(specifications, paths):
+    """Resolve explicit per-input preparation choices without changing defaults."""
+    selected = set(paths)
+    cutoffs = {}
+    for specification in specifications or ():
+        if '=' not in specification:
+            raise ValueError('--input-cutoff requires PATH=DEGREES')
+        path_text, value_text = specification.rsplit('=', 1)
+        if not path_text or not value_text.strip():
+            raise ValueError('--input-cutoff requires a nonempty PATH and DEGREES')
+        try:
+            cutoff = float(value_text)
+        except ValueError as error:
+            raise ValueError('--input-cutoff degrees must be a finite nonnegative angle') from error
+        if not math.isfinite(cutoff) or cutoff < 0:
+            raise ValueError('--input-cutoff degrees must be a finite nonnegative angle')
+        try:
+            path = Path(path_text).expanduser().resolve(strict=True)
+        except FileNotFoundError as error:
+            raise ValueError(f'--input-cutoff target does not exist: {path_text}') from error
+        if path not in selected:
+            raise ValueError(f'--input-cutoff target is not a selected input: {path_text}')
+        if path in cutoffs:
+            raise ValueError(f'Duplicate --input-cutoff target: {path_text}')
+        if path.suffix.lower() != '.bt1':
+            raise ValueError('--input-cutoff applies only to .bt1 input; .raw is already prepared')
+        cutoffs[path] = cutoff
+    return cutoffs
+
+
 def convert(args):
     _resolve_mode_options(args)
     paths = [p.expanduser().resolve(strict=True) for p in args.inputs]
@@ -130,21 +161,23 @@ def convert(args):
     names = [_name(p.stem) for p in paths]
     if len(set(names)) != len(names):
         raise ValueError('Input basenames collide; use distinct names in a separate input directory')
+    input_cutoffs = _input_cutoffs(getattr(args, 'input_cutoff', None), paths)
     before = [_digest(p) for p in paths]
     originals = [_read(p, args.allow_partial) for p in paths]
     if [_digest(p) for p in paths] != before:
         raise RuntimeError('An input changed while parsing; retry from a stable snapshot')
     datasets = []
-    for dataset in originals:
+    for path, dataset in zip(paths, originals):
         if dataset.header.get('format') == 'bt1':
+            cutoff = input_cutoffs.get(path, args.cutoff)
             if str(dataset.header.get('count_type', '')).upper() != 'NEUT':
                 raise ValueError('Only NEUT monitor-preset acquisition is supported; other counting modes need an explicit normalization model')
             if args.mode == 'legacy':
                 if dataset.header.get('complete') is not True:
                     raise ValueError('Legacy preparation requires a complete BT-1 scan; use --mode correct for an explicitly allowed partial snapshot')
-                dataset = prepare_legacy_bt1(dataset, args.cutoff, args.drop_detector, args.keep_detector1)
+                dataset = prepare_legacy_bt1(dataset, cutoff, args.drop_detector, args.keep_detector1)
             else:
-                dataset = prepare_bt1(dataset, args.cutoff, args.drop_detector, args.keep_detector1)
+                dataset = prepare_bt1(dataset, cutoff, args.drop_detector, args.keep_detector1)
         elif args.drop_detector or args.keep_detector1:
             raise ValueError('Detector-cut options apply to .bt1 input; .raw is already prepared')
         datasets.append(dataset)
@@ -193,8 +226,15 @@ def convert(args):
                     write_raw(data, stage/(name+'.raw'))
         for name, members in groups:
             if args.mode == 'legacy':
-                pattern = reduce_legacy(members, uncertainty=args.uncertainty,
-                    method=args.method, background=args.legacy_background, rescale=args.legacy_rescale)
+                try:
+                    pattern = reduce_legacy(members, uncertainty=args.uncertainty,
+                        method=args.method, background=args.legacy_background, rescale=args.legacy_rescale)
+                except ValueError as error:
+                    if input_cutoffs and 'identical per-detector grids and calibrations' in str(error):
+                        raise ValueError(f'{error}; per-input cutoffs can produce different prepared grids. '
+                                         'Use compatible preparation choices or convert separately; '
+                                         'correct mode supports differing prepared grids') from error
+                    raise
             else:
                 pattern = reduce_datasets(members, output_step=args.step, monitor=args.monitor,
                     uncertainty=args.uncertainty, endpoint=args.endpoint, zero_count=args.zero_count,
@@ -285,6 +325,9 @@ def main(argv=None):
     conv.add_argument('--allow-mixed-temperature', action='store_true', help='Permit explicit combination of scans differing by over 1 K')
     conv.add_argument('--allow-partial', action='store_true', help='Permit and label an acquired prefix in correct mode only')
     conv.add_argument('--cutoff', type=float, default=1.0, help='M4 cutoff for detectors 1–3 in .bt1 files (default: 1 degree)')
+    conv.add_argument('--input-cutoff', action='append', default=[], metavar='PATH=DEGREES',
+                      help='Override the M4 cutoff for one selected .bt1 path; repeat for multiple inputs. '
+                           'Other inputs use --cutoff. Legacy combination still requires compatible prepared grids')
     conv.add_argument('--keep-detector1', action='store_true')
     conv.add_argument('--drop-detector', action='append', type=int, default=[], metavar='N')
     conv.add_argument('--step', type=float, help='Output step in degrees; default smallest input spacing')

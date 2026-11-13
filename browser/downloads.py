@@ -1,12 +1,13 @@
 """Verify a private browser job and add FullProf downloads without reducing again.
 
-Called synchronously after the unchanged CLI, before any output leaves MEMFS.
+Called synchronously after the CLI, before any output leaves MEMFS.
 This is for the worker's private output directory, not acquisition directories.
 """
 from __future__ import annotations
 
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
 
@@ -30,7 +31,7 @@ def _name(value: str) -> str:
     return value
 
 
-def finalize_outputs(output_dir, input_paths, summaries, *, combine_name=None):
+def finalize_outputs(output_dir, input_paths, summaries, *, combine_name=None, expected_cutoffs=None):
     """Refuse missing/replaced inputs or outputs before offering any downloads.
 
     Provenance must identify every selected input, in normalization order, with
@@ -43,6 +44,12 @@ def finalize_outputs(output_dir, input_paths, summaries, *, combine_name=None):
         raise ValueError("Expected distinct selected inputs")
     if any(p.is_relative_to(output) for p in inputs):
         raise ValueError("Download output directory must be separate from inputs")
+    if expected_cutoffs is not None:
+        bt1_paths = {str(p) for p in inputs if p.suffix.lower() == ".bt1"}
+        if (not isinstance(expected_cutoffs, dict) or set(expected_cutoffs) != bt1_paths
+                or any(isinstance(v, bool) or not isinstance(v, (int, float))
+                       or not math.isfinite(v) or v < 0 for v in expected_cutoffs.values())):
+            raise ValueError("Cutoff request must contain one finite nonnegative value for every BT-1 input")
     groups = ([(_name(combine_name), inputs)] if combine_name is not None else
               [(_name(p.stem), [p]) for p in inputs])
     names = [name for name, _ in groups]
@@ -60,6 +67,12 @@ def finalize_outputs(output_dir, input_paths, summaries, *, combine_name=None):
                           for source in record.get("inputs", [])]
         if actual_sources != expected_sources:
             raise ValueError(f"{name}: result does not include every selected input in order with matching hashes")
+        if expected_cutoffs is not None:
+            for source in record["inputs"]:
+                if source["path"] in expected_cutoffs:
+                    actual = source.get("header", {}).get("preparation", {}).get("cutoff_m4_degrees")
+                    if isinstance(actual, bool) or actual != expected_cutoffs[source["path"]]:
+                        raise ValueError(f"{name}: applied M4 cutoff does not match the request for {Path(source['path']).name}")
         if summary.get("output") != str(output / (name + ".gsas")):
             raise ValueError(f"{name}: result points to an unexpected GSAS file")
         outputs = record.get("outputs", {})

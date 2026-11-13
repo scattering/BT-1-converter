@@ -96,6 +96,18 @@ json.dumps({'code': code, 'stdout': out.getvalue(), 'stderr': err.getvalue()})
       return { records: JSON.parse(result.stdout) };
     }
     const args = ['convert', ...files.map(f => `${job}/inputs/${f.name}`), '--out-dir', `${job}/outputs`, '--mode', options.mode, '--method', options.method];
+    const cutoffs = {};
+    for (const file of files) {
+      if (/\.bt1$/i.test(file.name)) {
+        const cutoff = file.cutoffM4 ?? 1;
+        if (typeof cutoff !== 'number' || !Number.isFinite(cutoff) || cutoff < 0) throw new Error(`${file.name}: M4 cutoff must be a finite nonnegative angle.`);
+        const path = `${job}/inputs/${file.name}`;
+        cutoffs[path] = cutoff;
+        args.push('--input-cutoff', `${path}=${cutoff}`);
+      } else if (file.cutoffM4 != null) {
+        throw new Error(`${file.name}: RAW input is already prepared; M4 cutoff applies only to BT-1 acquisitions.`);
+      }
+    }
     if (options.uncertainty !== 'default') args.push('--uncertainty', options.uncertainty);
     if (options.covariance) args.push('--covariance');
     if (options.combine) args.push('--combine', options.combineName || 'combined');
@@ -119,11 +131,13 @@ json.dumps({'code': code, 'stdout': out.getvalue(), 'stderr': err.getvalue()})
     py.globals.set('browser_inputs', JSON.stringify(files.map(f => `${job}/inputs/${f.name}`)));
     py.globals.set('browser_summaries', result.stdout);
     py.globals.set('browser_combine_name_json', JSON.stringify(options.combine ? (options.combineName || 'combined') : null));
+    py.globals.set('browser_cutoffs_json', JSON.stringify(cutoffs));
     const summaries = JSON.parse(py.runPython(`
 import json
 from browser.downloads import finalize_outputs
 json.dumps(finalize_outputs(browser_outputs, json.loads(browser_inputs),
-    json.loads(browser_summaries), combine_name=json.loads(browser_combine_name_json)), allow_nan=False)
+    json.loads(browser_summaries), combine_name=json.loads(browser_combine_name_json),
+    expected_cutoffs=json.loads(browser_cutoffs_json)), allow_nan=False)
 `));
     const downloads = py.FS.readdir(`${job}/outputs`).filter(n => n !== '.' && n !== '..').map(name => ({ name, bytes: py.FS.readFile(`${job}/outputs/${name}`) }));
     return { ...result, summaries, downloads };

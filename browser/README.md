@@ -4,7 +4,8 @@ This harness runs the existing `bt1modern` Python/NumPy package in a dedicated
 Pyodide Web Worker. It loads the runtime and converter from this Mac, accepts
 BT-1/RAW files, and exposes conversion results as browser downloads. It is a
 local validation harness with a separate static build for GitHub Pages. The scientific package is
-unchanged; `browser/adapter.py` handles the worker's file-publication boundary.
+unchanged in its preparation/reduction algorithms; the CLI accepts per-input
+cutoff settings and `browser/adapter.py` handles the worker's publication boundary.
 
 ## Installed runtime and provenance
 
@@ -91,6 +92,52 @@ the harness, Python modules/tests, runtime assets and validation inputs/reports.
 Browser evidence is written to the local project through a bounded JSON endpoint
 that requires the loopback page's origin. No remote conversion service receives
 uploaded files. Stop the server with Ctrl-C when finished.
+
+## Per-scan M4 cutoff
+
+Each BT-1 row has an **M4 cutoff (°)** setting, initially **1°**. Enter **1.9**
+for the requested `-c1.9` direct-beam cut. To change a group, select its rows,
+enter the cutoff in the batch control and apply it to the selected BT-1 scans.
+Unselected scans keep their values. Prepared RAW rows are not eligible because
+they have already passed through preparation.
+
+This is the original acquisition M4 coordinate for detectors **1–3**, not a
+2θ trim of the whole reduced pattern. Detectors 4–32 keep their recorded data.
+Correct mode keeps recorded M4 at/above the cutoff using its existing numerical
+tolerance; legacy mode uses historical float32/NINT rounding to an input row.
+Neither the mode nor its uncertainty policy changes when a cutoff is edited.
+
+Settings are cached with each scan, separately from the original bytes, and
+survive reload and refresh of that NCNR scan. Blank, negative or nonfinite values
+are rejected. A cutoff that removes an entire required bank is rejected during
+preparation. Changing settings does not rewrite completed results: rerun the
+conversion to obtain new output, and review its per-input cutoff record.
+
+Correct mode can combine scans prepared with different cutoffs. Legacy
+combination still requires matching prepared detector grids/calibrations;
+different numeric cutoffs are allowed only when they produce compatible grids.
+For matching acquisitions, applying one cutoff to the selection is usually the
+convenient legacy workflow. Otherwise choose correct mode or convert separately.
+Combination suggestions warn about different cutoff settings without altering
+the chosen values or establishing scientific equivalence.
+
+The worker passes each setting to `--input-cutoff PATH=DEGREES` and verifies the
+applied cutoff in each input's preparation metadata before exposing downloads.
+JSON records requested cutoff and removed leading-point counts for every input;
+result cards retain the cutoff settings used for that conversion.
+
+Local checks for this revision passed 137 full native tests without skips,
+32 browser adapter/export tests run natively, and 17 Node grouping/cutoff tests.
+The independent oracle audit passed 10 PROPREP RAW and 48 GFORMAT declared-array
+comparisons; the preparation/reduction kernels retain their release hashes.
+Chrome checks covered batch scope (including selected RAW), invalid drafts,
+per-scan edits, reload/NCNR-refresh persistence, new-scan defaults and correct/
+legacy combinations. Downloaded mixed-cutoff correct and same-cutoff legacy
+CSVs matched native output byte for byte, with requested per-input preparation
+metadata and unchanged source hashes. Evidence is in
+`artifacts/cutoff-oracle-review-20261113/summary.json` and
+`artifacts/cutoff-browser-downloads-wrdhidx7/`. Publication remains pending Mac/
+SSH unlock; the earlier deployment records below describe the prior release.
 
 ## Selecting scans and identifying combined results
 

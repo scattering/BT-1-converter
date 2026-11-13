@@ -2,6 +2,7 @@ import { CONFIG } from './runtime-config.mjs';
 import { fetchLatestScans, formatEasternDate, LISTING } from './ncnr.mjs';
 import { openStorage, loadPreferences, savePreferences } from './storage.mjs';
 import { proposeGroups } from './compatibility.mjs';
+import { cutoffGroupWarnings, fileForConversion, formatCutoffM4, isCutoffEligible, parseCutoffM4, planCutoffBatch, withDefaultCutoff } from './cutoffs.mjs';
 
 const byId = id => document.getElementById(id);
 const worker = new Worker(new URL('./worker.mjs', import.meta.url), { type: 'module' });
@@ -9,6 +10,7 @@ const pending = new Map();
 const scans = new Map();
 const results = new Map();
 const blobURLs = [];
+const cutoffDrafts = new Map();
 let sequence = 0;
 let busy = true;
 let runtimeReady = false;
@@ -73,6 +75,8 @@ function controls() {
   byId('validate').disabled ||= !CONFIG.validationURL;
   byId('example').disabled ||= !CONFIG.validationURL;
   byId('diagnostics').disabled ||= !CONFIG.testURL;
+  byId('apply-cutoff').disabled = busy || !selected.some(isCutoffEligible);
+  for (const input of document.querySelectorAll('input[data-cutoff-eligible]')) input.disabled = busy || input.dataset.cutoffEligible !== 'true';
 }
 async function run(action) {
   if (busy) return;
@@ -111,12 +115,65 @@ function acquisition(scan) {
   const h = scan.record.header || {};
   return h.complete === true ? 'Complete' : h.complete === false ? 'Partial' : 'Unknown (RAW)';
 }
+function cutoffDraft(scan) {
+  if (!cutoffDrafts.has(scan.id)) {
+    if (!isCutoffEligible(scan)) return '';
+    try { cutoffDrafts.set(scan.id, formatCutoffM4(withDefaultCutoff(scan).cutoffM4)); }
+    catch { cutoffDrafts.set(scan.id, String(scan.cutoffM4 ?? '')); }
+  }
+  return cutoffDrafts.get(scan.id);
+}
+function persistCutoff(scan) {
+  const value = scan.cutoffM4;
+  return storage.putScan({ ...scan, selected: false }).then(outcome => {
+    if (scans.get(scan.id) === scan && scan.cutoffM4 === value) scan.cached = notePersistence(outcome);
+    else if (!outcome.persisted) notePersistence(outcome);
+    return outcome;
+  });
+}
+function cutoffCell(scan) {
+  const cell = document.createElement('td'); cell.className = 'cutoff-cell';
+  const input = document.createElement('input'); input.type = 'text'; input.inputMode = 'decimal'; input.autocomplete = 'off';
+  input.setAttribute('aria-label', `M4 cutoff for ${scan.name}`);
+  input.dataset.cutoffEligible = String(isCutoffEligible(scan));
+  const message = document.createElement('span'); message.className = 'source-tag';
+  message.id = `cutoff-note-${encodeURIComponent(scan.id)}`;
+  input.setAttribute('aria-describedby', `cutoff-explanation ${message.id}`);
+  if (!isCutoffEligible(scan)) {
+    input.value = 'N/A'; input.disabled = true; message.textContent = 'RAW is already prepared';
+  } else {
+    input.value = cutoffDraft(scan);
+    function validateRow() {
+      try {
+        const value = parseCutoffM4(input.value);
+        input.setAttribute('aria-invalid', 'false'); message.classList.remove('cutoff-error');
+        message.textContent = 'Detectors 1–3 · M4 degrees';
+        return { value };
+      } catch (error) {
+        input.setAttribute('aria-invalid', 'true'); message.classList.add('cutoff-error');
+        message.textContent = `${error.message} Draft not saved; conversion is blocked for this scan.`;
+        return { error };
+      }
+    }
+    validateRow();
+    input.addEventListener('input', () => {
+      cutoffDrafts.set(scan.id, input.value);
+      const checked = validateRow();
+      if (!checked.error) {
+        scan.cutoffM4 = checked.value;
+        persistCutoff(scan);
+      }
+      renderSuggestions(); renderSelection();
+    });
+  }
+  cell.append(input, message); return cell;
+}
 function renderScans() {
   const body = byId('scan-list');
   body.replaceChildren();
   if (!scans.size) {
     const row = document.createElement('tr');
-    const cell = document.createElement('td'); cell.colSpan = 9; cell.className = 'empty';
+    const cell = document.createElement('td'); cell.colSpan = 10; cell.className = 'empty';
     cell.textContent = 'Add files or fetch NCNR scans to get started.'; row.append(cell); body.append(row);
   }
   for (const scan of scans.values()) {
@@ -170,7 +227,7 @@ function renderScans() {
     if (header.planned_points != null) {
       const points = document.createElement('span'); points.className = 'source-tag'; points.textContent = `${header.recorded_points} / ${header.planned_points} points`; stateCell.append(points);
     }
-    row.append(selectCell, nameCell, sampleCell, tempCell, instrumentCell, m4Cell, dateCell, archiveCell, stateCell); body.append(row);
+    row.append(selectCell, nameCell, sampleCell, tempCell, instrumentCell, m4Cell, cutoffCell(scan), dateCell, archiveCell, stateCell); body.append(row);
   }
   byId('scan-count').textContent = `${scans.size} scan${scans.size === 1 ? '' : 's'}`;
   renderSuggestions(); renderSelection(); storageSummary();
@@ -188,7 +245,8 @@ function renderSuggestions() {
     const review = document.createElement('p'); review.className = 'helper';
     review.textContent = 'Matching settings support this suggestion; confirm these files describe the same sample and measurement state.';
     card.append(heading, temperature, review);
-    for (const warning of group.warnings || []) { const note = document.createElement('p'); note.className = 'warning'; note.textContent = warning; card.append(note); }
+    const cutoffWarnings = cutoffGroupWarnings(group.ids.map(id => scans.get(id)), cutoffDrafts);
+    for (const warning of [...(group.warnings || []), ...cutoffWarnings]) { const note = document.createElement('p'); note.className = 'warning'; note.textContent = warning; card.append(note); }
     if (group.reasons?.length) {
       const details = document.createElement('details'); const title = document.createElement('summary'); title.textContent = 'Matched metadata'; details.append(title);
       for (const reason of group.reasons) { const text = document.createElement('p'); text.textContent = reason; details.append(text); }
@@ -209,6 +267,8 @@ function renderSuggestions() {
 function renderSelection() {
   const selected = selectedScans();
   byId('selection-summary').textContent = `${selected.length} of ${scans.size} scan(s) selected`;
+  const eligible = selected.filter(isCutoffEligible).length;
+  byId('apply-cutoff').textContent = `Apply to ${eligible} selected BT-1 scan${eligible === 1 ? '' : 's'}`;
   byId('convert').textContent = selected.length > 1 ? `Convert ${selected.length} separately` : selected.length === 1 ? 'Convert 1 scan' : 'Convert separately';
   byId('combine-selected').textContent = selected.length > 1 ? `Combine ${selected.length} selected scans` : 'Combine selected';
   byId('combine-selected').classList.toggle('primary', selected.length > 1);
@@ -251,6 +311,14 @@ function renderResults() {
       normalization.textContent = `Normalized to ${first?.name || 'the first input'}’s monitor${monitor}. The combined intensity is a normalized inverse-variance estimate, not a sum of raw counts. Its scale can resemble the first input; uncertainties reflect all contributing scans.`;
       article.append(provenance, normalization);
     }
+    const cutoffProvenance = document.createElement('p'); cutoffProvenance.className = 'result-cutoffs';
+    cutoffProvenance.textContent = 'Requested M4 cutoffs (detectors 1–3): ' + result.inputs.map(input => {
+      if (/\.raw$/i.test(input.name)) return `${input.name}: already prepared (not applicable)`;
+      if (input.cutoffM4 === undefined) return `${input.name}: not recorded in this cached result`;
+      try { return `${input.name}: ${formatCutoffM4(input.cutoffM4)}°`; }
+      catch { return `${input.name}: not recorded`; }
+    }).join(' · ');
+    article.append(cutoffProvenance);
     const priority = name => /\.gsas$/i.test(name) ? 0 : /\.dat$/i.test(name) ? 1 : /\.csv$/i.test(name) ? 2 : /\.json$/i.test(name) ? 3 : /\.npz$/i.test(name) ? 4 : 5;
     const ordered = [...result.files].sort((a, b) => priority(a.name) - priority(b.name) || a.name.localeCompare(b.name));
     const primary = ordered.filter(file => !/\.raw$/i.test(file.name));
@@ -331,11 +399,12 @@ async function addInputs(items, kind) {
     if (existing && existing.sha256 !== hash && !(kind === 'ncnr' && existing.source?.contentUrl === item.source?.contentUrl)) {
       throw new Error(`${item.file.name} is already loaded with different contents. Remove that input or give the new file a unique name.`);
     }
-    additions.push(existing && existing.sha256 === hash ? existing : {
+    additions.push(existing && existing.sha256 === hash ? existing : withDefaultCutoff({
       id, name: item.file.name, bytes: item.file.bytes, sha256: hash, record,
       source: item.source || null, added: new Date().toISOString(), kind,
       selected: kind === 'local' && record.header.complete !== false, cached: false,
-    });
+      cutoffM4: existing?.cutoffM4,
+    }));
   }
   for (const scan of additions) {
     scans.set(scan.id, scan);
@@ -361,6 +430,10 @@ async function fetchNCNR() {
 async function convertSelection(combine = false) {
   const selected = selectedScans();
   if (!selected.length) throw new Error('Select at least one input scan.');
+  const selectedFiles = selected.map(scan => {
+    try { return fileForConversion(scan, cutoffDraft(scan)); }
+    catch (error) { throw new Error(`${scan.name}: ${error.message} Correct the M4 cutoff before converting.`); }
+  });
   const options = currentOptions(combine);
   if (combine && selected.length < 2) throw new Error('Select at least two scans to combine.');
   if (combine && !/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(options.combineName)) throw new Error('The combined name must start with a letter or digit and contain only letters, digits, _, . or -.');
@@ -372,10 +445,10 @@ async function convertSelection(combine = false) {
     throw new Error('Selected scans differ by more than 1 K. Convert separately, or explicitly acknowledge mixed temperatures under “Combining scans”.');
   }
   status(combine ? 'Preparing each selected scan, then combining in the browser…' : 'Converting each selected scan in the browser…');
-  const converted = await request('convert', { files: selected.map(scan => ({ name: scan.name, bytes: scan.bytes })), options });
+  const converted = await request('convert', { files: selectedFiles, options });
   const result = {
     id: crypto.randomUUID(), created: new Date().toISOString(), options,
-    inputs: selected.map(scan => ({ name: scan.name, sha256: scan.sha256, source: scan.source, temperature: temperature(scan).value, monitor: scan.record.header.monitor, complete: scan.record.header.complete })),
+    inputs: selected.map((scan, index) => ({ name: scan.name, sha256: scan.sha256, source: scan.source, temperature: temperature(scan).value, monitor: scan.record.header.monitor, complete: scan.record.header.complete, cutoffM4: selectedFiles[index].cutoffM4 ?? null })),
     summaries: converted.summaries,
     files: converted.downloads.map(file => ({ name: file.name, blob: new Blob([file.bytes], { type: 'application/octet-stream' }) })), cached: false,
   };
@@ -470,12 +543,14 @@ function setupHelpAndTabs() {
     [3, 'measured temperature', 'Mean and minimum–maximum of the recorded temperature measurements, in kelvin. These are not the nominal temperature in the sample description or the temperature setpoint.'],
     [4, 'monochromator', 'The recorded monochromator, wavelength λ in ångströms and collimation in arcminutes. Matching detector corrections does not validate an instrument resolution profile.'],
     [5, 'planned M4 range', 'Planned motor start → stop and step, in degrees. M4 is not the full multi-detector 2θ range or the final GSAS range. A partial scan may cover only a prefix of this plan.'],
-    [6, 'acquisition date and time', 'Header date and terminal end marker are shown as recorded, with no established timezone. These files do not record a precise start time; archive updates are never used to infer one.'],
-    [7, 'archive update time', 'When the archive reports this file was last modified, displayed in US Eastern time. This is a separate event from acquisition start or end. Local inputs have no archive timestamp.'],
-    [8, 'acquisition completeness', 'Complete means all planned acquisition points are present. Partial means an incomplete recorded prefix. Prepared RAW files cannot establish acquisition completeness.'],
+    [6, 'M4 cutoff', 'Preparation cutoff for detectors 1–3 in M4 motor degrees, not the entire output 2θ pattern. Default: 1.0°. Correct mode keeps recorded M4 at or above the cutoff; legacy uses the historical rounded index. RAW is already prepared.'],
+    [7, 'acquisition date and time', 'Header date and terminal end marker are shown as recorded, with no established timezone. These files do not record a precise start time; archive updates are never used to infer one.'],
+    [8, 'archive update time', 'When the archive reports this file was last modified, displayed in US Eastern time. This is a separate event from acquisition start or end. Local inputs have no archive timestamp.'],
+    [9, 'acquisition completeness', 'Complete means all planned acquisition points are present. Partial means an incomplete recorded prefix. Prepared RAW files cannot establish acquisition completeness.'],
   ];
   for (const [index, label, text] of columnHelp) headers[index].append(helpButton(label, text));
   const controlHelp = [
+    ['cutoff-batch', 'batch M4 cutoff', 'Apply one finite nonnegative cutoff to selected BT-1 inputs only, leaving unselected scans unchanged. For example, enter 1.9 for a requested 1.9° direct-beam cutoff. This affects preparation of detectors 1–3. Different prepared grids may be incompatible with legacy combination.'],
     ['mode', 'calculation mode', 'Correct uses float64 and enclosing measured intervals. Legacy preserves historical float32 arithmetic, snapping, masks and endpoints, then writes integer GSAS values. Both run in Python and NumPy.'],
     ['uncertainty', 'uncertainty policy', 'Independent propagation uses squared interpolation weights for variances. Legacy-linear interpolates sigma. This choice is separate from calculation mode; changing it does not change geometry or the float32/float64 precision.'],
     ['method', 'sampling method', 'Interpolate uses eligible neighbouring observations. Nearest assigns measured observations to nearest grid bins; overlaps can still be combined. Endpoint and mask rules depend on the selected mode.'],
@@ -523,6 +598,26 @@ byId('files').onchange = () => run(async () => {
     status(`${files.length} local input(s) inspected. Review their metadata before conversion.`);
   } finally { byId('files').value = ''; }
 });
+byId('apply-cutoff').onclick = () => run(async () => {
+  let updates;
+  try { updates = planCutoffBatch(scans.values(), byId('cutoff-batch').value); }
+  catch (error) {
+    byId('cutoff-batch').setAttribute('aria-invalid', 'true');
+    byId('cutoff-batch-status').textContent = `${error.message} No scan settings changed.`;
+    byId('cutoff-batch-status').classList.add('cutoff-error');
+    throw error;
+  }
+  byId('cutoff-batch').setAttribute('aria-invalid', 'false');
+  byId('cutoff-batch-status').classList.remove('cutoff-error');
+  for (const update of updates) {
+    const scan = scans.get(update.id); scan.cutoffM4 = update.cutoffM4;
+    cutoffDrafts.set(scan.id, formatCutoffM4(update.cutoffM4));
+  }
+  await Promise.all(updates.map(update => persistCutoff(scans.get(update.id))));
+  renderScans();
+  byId('cutoff-batch-status').textContent = `Applied ${formatCutoffM4(byId('cutoff-batch').value)}° to ${updates.length} selected BT-1 scan(s). Unselected scans and prepared RAW inputs were unchanged.`;
+  status('M4 cutoff settings updated. Existing results and original source bytes are unchanged.');
+});
 byId('ncnr-load').onclick = () => run(fetchNCNR);
 byId('quick-convert').onclick = () => run(async () => {
   const count = selectedScans().length;
@@ -541,13 +636,13 @@ byId('select-complete').onclick = () => { for (const scan of scans.values()) sca
 byId('remove-selected').onclick = () => run(async () => {
   const selected = selectedScans(); const outcome = await storage.removeScans(selected.map(scan => scan.id));
   if (!outcome.persisted && selected.some(scan => scan.cached)) throw new Error(outcome.error);
-  for (const scan of selected) scans.delete(scan.id);
+  for (const scan of selected) { scans.delete(scan.id); cutoffDrafts.delete(scan.id); }
   renderScans(); status(`${selected.length} input(s) removed from this browser workspace. Saved conversion results remain available.`);
 });
 byId('clear-storage').onclick = () => run(async () => {
   const outcome = await storage.clear();
   if (!outcome.persisted && [...scans.values(), ...results.values()].some(item => item.cached)) throw new Error(outcome.error);
-  scans.clear(); results.clear(); storageNotice = outcome.persisted ? '' : outcome.error;
+  scans.clear(); cutoffDrafts.clear(); results.clear(); storageNotice = outcome.persisted ? '' : outcome.error;
   renderScans(); renderResults(); byId('conversion-summary').textContent = '';
   status(outcome.persisted ? 'Saved inputs and results cleared from this browser workspace. Original source files are unaffected.' : `Inputs and results cleared from this tab, but browser storage could not be cleared: ${outcome.error}`, !outcome.persisted);
 });
@@ -578,7 +673,11 @@ byId('example').onclick = () => run(async () => {
     storage = await openStorage();
     const cached = await storage.load();
     storageNotice = storage.error || '';
-    for (const scan of cached.scans) scans.set(scan.id, { ...scan, selected: false, cached: true });
+    for (const previous of cached.scans) {
+      const scan = withDefaultCutoff({ ...previous, selected: false, cached: true });
+      scans.set(scan.id, scan);
+      if (previous.cutoffM4 !== scan.cutoffM4) scan.cached = notePersistence(await storage.putScan(scan));
+    }
     for (const result of cached.results) results.set(result.id, { ...result, cached: true });
     const complete = [...scans.values()].filter(scan => scan.record.header.complete === true).sort((a, b) => Date.parse(b.source?.dateModified || b.added) - Date.parse(a.source?.dateModified || a.added));
     if (complete[0]) complete[0].selected = true;

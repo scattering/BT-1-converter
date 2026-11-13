@@ -12,7 +12,7 @@ import tempfile
 from install_runtime import ROOT, VERSION
 
 MARKER = ".bt1-site-build"
-APP_FILES = ("index.html", "app.mjs", "ncnr.mjs", "storage.mjs", "compatibility.mjs", "worker.mjs")
+APP_FILES = ("index.html", "app.mjs", "ncnr.mjs", "storage.mjs", "compatibility.mjs", "cutoffs.mjs", "worker.mjs")
 RUNTIME_SUFFIXES = {".js", ".mjs", ".wasm", ".json", ".zip", ".whl"}
 CONFIG = {
     "runtimeURL": "./pyodide/",

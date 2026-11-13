@@ -1,7 +1,7 @@
 # BT-1 reduction / Pyodide handoff
 
-Updated 2026-11-13 after publishing and checking the combination/download
-revision. Earlier deployment evidence is retained below.
+Updated 2026-11-13 while adding per-scan cutoff controls. Earlier deployment
+evidence is retained below; the cutoff revision is not yet published.
 
 ## Starting point
 
@@ -11,7 +11,8 @@ PROPREP/GFORMAT. Read `AGENTS.md`, `README.md`, `PYTHON_MODES.md`, and
 `LOCAL_SETUP.md` before changing it. `SOURCE_PROVENANCE.json` records imported
 source hashes. Native scientific baseline commit: `5f0e366` (relocation to user
 home). Browser implementation commit `5cb0922` was published through source
-commit `2e7de03`; the scientific modules remain unchanged from that baseline.
+commit `2e7de03`. Preparation/reduction kernels remain unchanged from that
+baseline; the CLI now adds explicit per-input cutoff selection.
 The former `/Users/williamratcliff/Documents/Codex/bt1-converter` location is
 obsolete. The local environment was recreated after the move.
 
@@ -20,6 +21,54 @@ Reference release:
 Review archive:
 `/Users/williamratcliff/Downloads/bt1-proprep-gformat-python-v0.3.0-review.zip`.
 Do not modify those source archives or original acquisition files.
+
+## November 13 per-scan cutoff revision
+
+Craig requested the `-c1.9` direct-beam cutoff for the first three detectors.
+The browser now exposes each BT-1 scan's M4 cutoff and a batch action for selected
+BT-1 scans. Default remains 1°. RAW is already prepared and cannot receive a
+new acquisition cutoff. Settings are cached per scan, survive NCNR refresh, and
+are snapshotted into results; original bytes and prior results are preserved.
+Invalid row drafts block conversion rather than falling back silently.
+
+The CLI supports repeated `--input-cutoff PATH=DEGREES`, retaining `--cutoff`
+as the global fallback. It validates selected resolved paths and finite
+nonnegative values, and rejects duplicate or RAW targets. Worker requests pass
+every BT-1 cutoff and verify `header.preparation.cutoff_m4_degrees` against the
+request before offering downloads. No preparation, reduction or GSAS arithmetic
+changed. Correct mode accepts differing prepared starts. Legacy still rejects
+incompatible grids; different numeric cutoffs that round to the same grid may
+be compatible, so do not reject on numeric inequality alone.
+
+Current checks: `make test-full` passed **137 tests with no skips**; browser
+adapter/download/FullProf helpers passed **32 native tests**; Node grouping and
+cutoff helpers passed **17 tests with no skips** on this Mac. Evidence logs:
+`artifacts/cutoff-test-full.log` and `artifacts/cutoff-browser-helpers.log`.
+Independent oracle audit: `artifacts/cutoff-oracle-review-20261113/summary.json`
+passed 10 PROPREP RAW comparisons, 48 declared GFORMAT GSAS-array comparisons,
+16 detector-scope checks and eight mixed-cutoff checks. For these real scans,
+1.9° removes 12/201 leading rows from each of detectors 1–3 and leaves 4–32
+unchanged. These are finite tested cases, not universal numerical equivalence.
+
+Browser comparison baselines for correct single/same-cut/mixed-cut and legacy
+same-cut conversions are in `artifacts/cutoff-native-baseline-hbm3o7ep/`.
+Local Chrome verified migration of old scans to 1°, selected-only batch apply
+with a RAW scan included, unchanged unselected values, invalid batch rejection,
+invalid row conversion refusal, per-row editing, mixed-cutoff suggestion
+warnings, reload persistence and NCNR refresh persistence. A newly discovered
+Mn5Si008 acquisition defaulted to 1°. Correct 1.9°/2.0°, correct 1.9°/1.9° and
+legacy 1.9°/1.9° combinations all produced 3288-point results with the requested
+per-input settings. Incompatible legacy mixed grids failed without adding a
+result. Editing cutoffs preserved prior result snapshots.
+
+Downloaded correct mixed-cutoff and legacy same-cutoff CSVs are byte-identical
+to their native baselines. Their JSON preparation metadata, ordered source
+hashes, removed-point counts and output hashes passed all 12 checks per case:
+`artifacts/cutoff-browser-downloads-wrdhidx7/cutoff_mixed-comparison.json` and
+`cutoff_legacy-comparison.json`. The Mac locked during the final correct
+same-cutoff CSV save dialog; that download comparison and public deployment
+remain pending. The SSH agent currently lists no identities. Resume after Mac
+and 1Password unlock; preserve the existing SSH remote.
 
 ## November 13 combination/download revision
 
@@ -133,8 +182,10 @@ Actual Chrome WebAssembly conversion testing has now run:
 
 - All **15 conversion cases completed**; **14 passed exact native comparison**.
   Both default modes, representative real scans, combining scans and checked
-  covariance arrays matched. Scientific modules remain byte-identical to the
-  imported release (`artifacts/pyodide-validation/source-integrity.json`).
+  covariance arrays matched. At that revision all scientific modules were
+  byte-identical to the imported release
+  (`artifacts/pyodide-validation/source-integrity.json`); the later CLI cutoff
+  extension is described above and leaves preparation/reduction kernels intact.
 - One optional case, correct mode with `--uncertainty legacy-linear`, has one
   pre-serialization sigma differing by **one ULP**: browser
   `5.500000000092105`, native `5.500000000092106` (absolute difference

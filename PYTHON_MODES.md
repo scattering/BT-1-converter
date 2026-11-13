@@ -95,6 +95,17 @@ the pre-serialization values in both modes. Legacy CSV retains internal float32
 values promoted exactly to float64; its greater displayed decimal count does not
 imply greater calculation precision.
 
+The CLI's per-input `--input-cutoff PATH=DEGREES` overrides and the browser's
+per-scan M4 controls select the existing preparation functions independently
+for each acquisition. They do not change cutoff arithmetic, variance policies,
+normalization or reduction order. Global `--cutoff` still defaults to 1 degree;
+an override is recorded in that input's preparation metadata. Correct mode can
+combine different prepared starts. Legacy combination retains the identical
+per-detector-grid requirement: different requested cutoffs may still work if
+their historical rounding produces the same grids, but incompatible grids are
+rejected rather than recut or padded to match. Prepared RAW cannot receive a new
+per-input cutoff because it does not retain the original acquisition points.
+
 Intentional differences from raw historical files are explicit:
 
 - Unused final-record fields are blank. Native GFORMAT can write undeclared array
