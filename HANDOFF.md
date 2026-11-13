@@ -1,7 +1,7 @@
 # BT-1 reduction / Pyodide handoff
 
-Updated 2026-11-13. Earlier live-deployment evidence is retained below; the combination/download revision is implemented and tested locally.
-Public deployment and the browser save-dialog check are pending Mac/SSH unlock.
+Updated 2026-11-13 after publishing and checking the combination/download
+revision. Earlier deployment evidence is retained below.
 
 ## Starting point
 
@@ -69,17 +69,28 @@ Current local validation: `make test-full` passed 126 tests with no skips;
 `browser.test_downloads` plus `browser.test_fullprof` passed 20 native Python
 tests; Node grouping tests passed 10 with no skips on this Mac; eight native
 CLI/finalizer end-to-end runs passed in
-`artifacts/browser-finalize-e2e-arhyv3bj/report.json`. Local Chrome passed the two-selection quick-action guard and completed correct
+`artifacts/browser-finalize-e2e-arhyv3bj/report.json`. Local Chrome passed the
+two-selection quick-action guard and completed correct
 combined (six outputs), single (five outputs), and separate legacy two-input
 (ten outputs) conversions. Both source names,
 GSAS/DAT-first links, collapsed individual RAW downloads and cache restoration
-were verified. The browser save dialog remains unavailable while the Mac is
-locked; do not claim the clicked browser DAT was saved/read by FullProf. Native
-exports were independently read as above. SSH publication is also blocked: the
-agent socket is present but ssh-add lists no identities, and GitHub SSH returned
-agent signing failure / Permission denied (publickey). Preserve the SSH remote;
-resume after the user unlocks the Mac/1Password. Keep these scopes separate from
-the earlier dated browser/native evidence below.
+were verified.
+
+SSH publication succeeded for `60949ad`; the earlier Mac/agent lock is resolved.
+[Pages run 43451754981](https://github.com/scattering/BT-1-converter/actions/runs/43451754981)
+completed successfully. The public manifest, app, worker and both new Python
+modules match the tested local hashes. Live Chrome verified the selection guard
+and combined 001/002 into `release_60949ad_001_002`, with 3300 valid observations
+and six outputs. DAT, CSV and JSON were saved through Chrome's normal download
+dialogs to `~/Downloads/`. Their downloaded bytes match the metadata hashes;
+the DAT triples exactly equal valid CSV rows, and both inputs appear in order.
+Screenshot: `artifacts/release-60949ad-browser.jpg`.
+The actual downloaded DAT also passed FullProf 8.50: 3300/3300 observations,
+normal termination and no mismatches at the reader's reported precision.
+All 13 download/provenance/reader checks passed; the downloaded CSV is also
+byte-identical to native correct-mode 001→002 output. Evidence:
+`artifacts/fullprof-live-60949ad-nnlvz_rv/summary.json`. Downloaded originals
+remain unchanged; all reader-generated files are in that ignored directory.
 
 ## What is verified
 

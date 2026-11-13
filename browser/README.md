@@ -119,14 +119,28 @@ behind a reported first-scan-only result. Current local checks passed: the full
 native suite (126 tests, no skips), 20 browser download/FullProf helper tests
 run natively, 10 Node grouping tests on this Mac (no skips), and eight native
 CLI/finalizer end-to-end runs. The latter report is
-`artifacts/browser-finalize-e2e-arhyv3bj/report.json`. Local Chrome verified that the quick action preserves two selected inputs and
-existing results, then completed a two-input correct conversion (six outputs)
+`artifacts/browser-finalize-e2e-arhyv3bj/report.json`. Local Chrome verified that
+the quick action preserves two selected inputs and existing results, then
+completed a two-input correct conversion (six outputs),
 a single-input correct conversion (five outputs), and separate legacy conversion
 of two inputs (ten outputs). The combined result names
 both sources and offers GSAS/DAT before the collapsed individual RAW files;
-reload restored the new result and DAT link. Saving the browser download and
-public deployment remain pending because the Mac is locked and its SSH agent
-cannot sign. Earlier published checks below remain historical evidence.
+reload restored the new result and DAT link.
+
+Revision `60949ad` is published through successful
+[Pages run 43451754981](https://github.com/scattering/BT-1-converter/actions/runs/43451754981).
+The public manifest and application/Python module hashes match the tested build.
+Live Chrome verified the two-selection guard and a 3300-point combined result,
+then saved its DAT, CSV and JSON through the normal download dialogs. Downloaded
+hashes match the JSON record, both input sources are recorded in order, and DAT
+triples exactly equal valid CSV rows. Earlier published checks below remain
+historical evidence.
+
+FullProf 8.50 then read that downloaded DAT with normal termination and all
+3300 observations, with no mismatches at its reported precision. The downloaded
+CSV is byte-identical to the native correct-mode 001→002 result. All 13 checks
+passed in `artifacts/fullprof-live-60949ad-nnlvz_rv/summary.json`; the downloaded
+originals were not modified.
 
 ## FullProf DAT export
 
