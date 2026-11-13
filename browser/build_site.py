@@ -61,7 +61,8 @@ def build(destination: Path, runtime: Path) -> dict:
         (staging / "runtime-config.mjs").write_text(config)
         for source in sorted((ROOT / "bt1modern").glob("*.py")):
             copy_file(source, staging / "python" / "bt1modern" / source.name)
-        copy_file(ROOT / "browser" / "adapter.py", staging / "python" / "browser" / "adapter.py")
+        for name in ("adapter.py", "fullprof.py", "downloads.py"):
+            copy_file(ROOT / "browser" / name, staging / "python" / "browser" / name)
         for source in sorted(runtime.iterdir()):
             if source.suffix in RUNTIME_SUFFIXES:
                 copy_file(source, staging / "pyodide" / source.name)

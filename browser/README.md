@@ -92,6 +92,85 @@ Browser evidence is written to the local project through a bounded JSON endpoint
 that requires the loopback page's origin. No remote conversion service receives
 uploaded files. Stop the server with Ctrl-C when finished.
 
+## Selecting scans and identifying combined results
+
+With two or more scans selected, **Combine N selected scans** is the primary
+action; **Convert N separately** remains a distinct choice. Suggested groups
+only select inputs. The one-scan **Fetch & convert latest** shortcut refuses to
+replace a selection of two or more scans and points back to those actions,
+preserving the current selection and results.
+
+Before creating DAT or exposing new download links, the browser verifies result
+names/group counts, ordered input paths/SHA-256 hashes/byte counts, and output
+SHA-256 hashes/byte counts against the conversion request and generated files.
+Combined results show their input filenames and the first input's normalization
+monitor above the downloads. The combined GSAS, FullProf DAT, CSV, JSON and
+optional covariance files appear first. **Prepared input files (not combined)**
+is collapsed separately: each RAW file is one individual prepared acquisition,
+not the combined pattern.
+
+Combination produces a monitor-normalized inverse-variance estimate. It does
+not sum raw counts, so its intensity scale can resemble the first input even
+when both scans contribute. A real-data audit of `Mn5Si001.bt1`/`Mn5Si002.bt1`
+succeeded in both modes and both input orders, with both sources in metadata
+and different combined intensities/uncertainties from the first scan alone.
+This establishes the checked combination behavior, not the exact sequence
+behind a reported first-scan-only result. Current local checks passed: the full
+native suite (126 tests, no skips), 20 browser download/FullProf helper tests
+run natively, 10 Node grouping tests on this Mac (no skips), and eight native
+CLI/finalizer end-to-end runs. The latter report is
+`artifacts/browser-finalize-e2e-arhyv3bj/report.json`. Local Chrome verified that the quick action preserves two selected inputs and
+existing results, then completed a two-input correct conversion (six outputs)
+a single-input correct conversion (five outputs), and separate legacy conversion
+of two inputs (ten outputs). The combined result names
+both sources and offers GSAS/DAT before the collapsed individual RAW files;
+reload restored the new result and DAT link. Saving the browser download and
+public deployment remain pending because the Mac is locked and its SSH agent
+cannot sign. Earlier published checks below remain historical evidence.
+
+## FullProf DAT export
+
+The browser additionally exports a `.dat` pattern in FullProf **XYDATA** format
+for **INSTRM = 10**. It has exactly six header records, beginning with `XYDATA`;
+the control record `INTER 1 1 0 0` uses unit X/Y multipliers and variable-step
+input with no additional FullProf interpolation. This follows the
+[FullProf manual's INSTRM = 10 format](https://fullprofsuite.github.io/FullProf-Web/downloads/Docs/FullProf_Manual.pdf).
+
+After the header, each row contains **2θ in degrees, intensity, sigma**. The
+writer copies the exact numeric tokens from valid rows of the pre-serialization
+CSV, including fractional values in legacy mode. Invalid bins are omitted and
+the surviving angles are unchanged. Gaps therefore remain absent observations;
+the exporter neither fills them nor inserts intensity/sigma placeholders that
+an importer might give weight. The uniform GSAS file and CSV/JSON validity
+metadata remain available alongside DAT.
+
+Exact triples in the file do not guarantee identical downstream weighting.
+Actual **FullProf 8.50** reader probes changed valid nonpositive intensities
+(`I <= 0`) to zero and their variance to one, even when a different positive
+sigma was supplied. It also assigned variance one to `(I, sigma) = (0, 0)`
+placeholders, which is why invalid bins are omitted from DAT. The exporter
+preserves valid nonpositive triples and reports a warning/count when present;
+it does not silently alter them to mimic this reader behavior. Review these
+points before fitting, and retain CSV/JSON as the numerical/provenance record.
+DAT contains marginal sigmas, not the optional conditional covariance factor.
+DAT is added to newly converted results. Previously cached results retain their
+original downloads; rerun the conversion to obtain DAT. The Python reduction
+core and existing GSAS/CSV outputs are unchanged by this browser export.
+
+The actual FullProf 8.50 reader accepted the new writer's combined
+`Mn5Si001.bt1`/`Mn5Si002.bt1` DAT exports in both correct and legacy modes:
+3300/3300 rows, normal termination, and matching angles at printed precision.
+Intensity/variance comparisons stayed within the reader's printed precision
+and internal floating-point bounds. The exported tokens exactly matched valid
+CSV tokens, and CSV hashes were unchanged. A synthetic 98-row export omitted
+three interior invalid bins without filling them; its only observed reader
+changes were the two documented nonpositive-intensity cases.
+
+Evidence: `artifacts/fullprof-export-validation-wkuxgyzm/summary.json` and
+`artifacts/fullprof-reader-matrix-y8udnmzz/summary.json`, with per-case
+comparison files. These are version-specific parsing/weighting checks, not a
+validated instrument profile or refinement of the BT-1 sample.
+
 ## Static build and GitHub Pages
 
 The connected repository is
@@ -290,5 +369,6 @@ uncertainty is not propagated, covariance is conditional on observed variances
 and fixed weights, ordinary GSAS fitting does not consume the exported
 covariance automatically, and the 60-prime instrument profile remains
 unvalidated. Legacy float32 operation boundaries, snapping/masks, and integer
-serialization retain their documented meaning. Zero-weight gaps and blank
-record padding are preserved in both modes.
+serialization retain their documented meaning. GSAS zero-weight gaps and blank
+record padding are preserved in both modes; FullProf DAT uses explicit surviving
+angles and omits invalid bins as described above.

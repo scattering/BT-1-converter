@@ -10,7 +10,11 @@ The converter also runs in a browser through a local Pyodide Web Worker. See
 [the browser UI, setup and validation notes](browser/README.md) for installation,
 direct NCNR retrieval, the static GitHub Pages build, and the measured parity
 results (including one recorded one-ULP difference in an optional uncertainty
-configuration). The Python scientific modules remain unchanged.
+configuration). The browser identifies combined pattern downloads separately
+from individual prepared RAW files, verifies input provenance before offering
+downloads, and adds a FullProf XYDATA `.dat` export. Its no-interpolation/gap
+policy and FullProf reader weighting limitations are documented there. The
+Python scientific modules remain unchanged.
 
 Both **correct** and **legacy** modes execute entirely in Python and NumPy. No
 compiler, Fortran executable, subprocess, network or authentication is used for
@@ -87,6 +91,14 @@ For each input the CLI writes:
   validity masks, quantization and limitations.
 - `.covariance.npz`, optionally in correct independent mode: a sparse factor F
   describing conditional covariance C=F@F.T.
+
+The browser also provides FullProf `.dat` output derived from valid CSV rows;
+this is a browser export, not a new native CLI backend. It preserves the exact
+X/intensity/sigma tokens, omits invalid bins, and uses `INSTRM=10` with
+`INTER 1 1 0 0` to avoid interpolation. FullProf 8.50 can change weighting for
+valid nonpositive intensities, which the exporter preserves and flags. See
+[the FullProf export contract](browser/README.md#fullprof-dat-export) before
+using it for fitting.
 
 The Python writer does not generate an instrument calibration. Supply a measured
 profile with `--instrument-file /path/calibrated.inst`; this copies/references the

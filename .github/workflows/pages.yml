@@ -39,6 +39,8 @@ jobs:
           python-version: '3.14'
       - name: Configure Pages
         uses: actions/configure-pages@v5
+      - name: Test download provenance and FullProf export
+        run: python -m unittest browser.test_downloads browser.test_fullprof -v
       - name: Install verified Pyodide runtime
         run: python browser/install_runtime.py
       - name: Build static site

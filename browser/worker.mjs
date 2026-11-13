@@ -112,8 +112,21 @@ with publication_context(), contextlib.redirect_stdout(out), contextlib.redirect
 json.dumps({'code': code, 'stdout': out.getvalue(), 'stderr': err.getvalue()})
 `));
     if (result.code !== 0) throw new Error(result.stderr || result.stdout);
+    await loadPython(py, 'fullprof');
+    await loadPython(py, 'downloads');
+    status('Verifying selected inputs and preparing FullProf downloads…');
+    py.globals.set('browser_outputs', `${job}/outputs`);
+    py.globals.set('browser_inputs', JSON.stringify(files.map(f => `${job}/inputs/${f.name}`)));
+    py.globals.set('browser_summaries', result.stdout);
+    py.globals.set('browser_combine_name_json', JSON.stringify(options.combine ? (options.combineName || 'combined') : null));
+    const summaries = JSON.parse(py.runPython(`
+import json
+from browser.downloads import finalize_outputs
+json.dumps(finalize_outputs(browser_outputs, json.loads(browser_inputs),
+    json.loads(browser_summaries), combine_name=json.loads(browser_combine_name_json)), allow_nan=False)
+`));
     const downloads = py.FS.readdir(`${job}/outputs`).filter(n => n !== '.' && n !== '..').map(name => ({ name, bytes: py.FS.readFile(`${job}/outputs/${name}`) }));
-    return { ...result, summaries: JSON.parse(result.stdout), downloads };
+    return { ...result, summaries, downloads };
   }
   if (action === 'validate') {
     if (!CONFIG.validationURL || !CONFIG.testURL) throw new Error('Validation fixtures are available in the local test harness.');

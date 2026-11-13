@@ -1,6 +1,7 @@
 # BT-1 reduction / Pyodide handoff
 
-Updated 2026-11-12 after live verification around 8:56–8:59 PM EST.
+Updated 2026-11-13. Earlier live-deployment evidence is retained below; the combination/download revision is implemented and tested locally.
+Public deployment and the browser save-dialog check are pending Mac/SSH unlock.
 
 ## Starting point
 
@@ -19,6 +20,66 @@ Reference release:
 Review archive:
 `/Users/williamratcliff/Downloads/bt1-proprep-gformat-python-v0.3.0-review.zip`.
 Do not modify those source archives or original acquisition files.
+
+## November 13 combination/download revision
+
+The browser now guards the one-scan quick-latest action when two or more inputs
+are selected, so it cannot replace that selection. **Combine N selected scans**
+becomes primary for multiple selections, with separate conversion still
+available. Before adding DAT or exposing new downloads, the browser validates
+result names/group counts, ordered source paths/SHA-256 hashes/byte counts and
+generated output SHA-256 hashes/byte counts. Result cards put
+combined pattern/metadata downloads first and individual prepared RAW files in
+a collapsed **Prepared input files (not combined)** section. They explain the
+first-input monitor normalization and inverse-variance estimate so that a
+similar intensity scale is not mistaken for an uncombined raw-count result.
+
+The real `Mn5Si001.bt1`/`Mn5Si002.bt1` audit passed in both modes and both input
+orders, with both inputs recorded and combined intensities/uncertainties
+different from the first scan alone. Original sources were preserved. Evidence:
+`artifacts/zach-combine-audit-fxnbl99i/report.json`. This does **not** identify
+the exact cause of the reported user result; do not claim that it does.
+
+The new browser FullProf `.dat` writer uses six header records, `XYDATA`,
+`INSTRM=10`, and `INTER 1 1 0 0` (unit multipliers, no interpolation). It preserves
+the original valid CSV X/Y/sigma tokens, omits invalid rows without changing
+surviving angles, and reports omitted/nonpositive counts and provenance. Do
+not encode missing bins with `(0, 0)` rows: actual FullProf 8.50 reader checks
+gave those rows variance one. The same reader clamps valid `I <= 0` to zero
+and variance one even with supplied positive sigma. The exporter preserves
+these valid triples and warns rather than changing scientific data. Exact file
+triples therefore do not establish identical FullProf fitting weights.
+
+Reader evidence: `artifacts/fullprof-reader-matrix-y8udnmzz/summary.json` and
+per-case comparison files. It is a parser/weighting check, not a BT-1 refinement.
+The final writer outputs were also read by FullProf 8.50:
+`artifacts/fullprof-export-validation-wkuxgyzm/summary.json`. Both real combined
+001/002 modes imported 3300/3300 rows with normal termination and matching angles
+at printed precision; intensity/variance comparisons stayed within printed
+precision/internal-float bounds. DAT tokens exactly matched valid CSV tokens,
+and CSV hashes were unchanged. The synthetic 98-row export retained three
+interior gaps; its two nonpositive-intensity reader changes are explicitly
+documented/warned, not treated as exact downstream equivalence.
+FullProf remains an independent native validation executable, never a runtime
+backend. The Python reduction core and existing GSAS/CSV outputs remain
+unchanged. Only newly converted results gain DAT; old cached results must be
+converted again to obtain it.
+
+Current local validation: `make test-full` passed 126 tests with no skips;
+`browser.test_downloads` plus `browser.test_fullprof` passed 20 native Python
+tests; Node grouping tests passed 10 with no skips on this Mac; eight native
+CLI/finalizer end-to-end runs passed in
+`artifacts/browser-finalize-e2e-arhyv3bj/report.json`. Local Chrome passed the two-selection quick-action guard and completed correct
+combined (six outputs), single (five outputs), and separate legacy two-input
+(ten outputs) conversions. Both source names,
+GSAS/DAT-first links, collapsed individual RAW downloads and cache restoration
+were verified. The browser save dialog remains unavailable while the Mac is
+locked; do not claim the clicked browser DAT was saved/read by FullProf. Native
+exports were independently read as above. SSH publication is also blocked: the
+agent socket is present but ssh-add lists no identities, and GitHub SSH returned
+agent signing failure / Permission denied (publickey). Preserve the SSH remote;
+resume after the user unlocks the Mac/1Password. Keep these scopes separate from
+the earlier dated browser/native evidence below.
 
 ## What is verified
 

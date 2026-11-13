@@ -209,6 +209,10 @@ function renderSuggestions() {
 function renderSelection() {
   const selected = selectedScans();
   byId('selection-summary').textContent = `${selected.length} of ${scans.size} scan(s) selected`;
+  byId('convert').textContent = selected.length > 1 ? `Convert ${selected.length} separately` : selected.length === 1 ? 'Convert 1 scan' : 'Convert separately';
+  byId('combine-selected').textContent = selected.length > 1 ? `Combine ${selected.length} selected scans` : 'Combine selected';
+  byId('combine-selected').classList.toggle('primary', selected.length > 1);
+  byId('convert').classList.toggle('primary', selected.length < 2);
   byId('select-all').checked = scans.size > 0 && selected.length === scans.size;
   byId('select-all').indeterminate = selected.length > 0 && selected.length < scans.size;
   byId('conversion-selection').textContent = selected.length ?
@@ -237,13 +241,53 @@ function renderResults() {
     head.append(titleBlock, remove);
     const summary = document.createElement('p'); summary.className = 'result-summary';
     summary.textContent = result.summaries.map(item => `${item.name}: ${item.valid_points} valid points, ${item.gsas_banks} uniform bank(s)`).join(' · ');
-    const downloads = document.createElement('div'); downloads.className = 'downloads';
-    for (const file of result.files) {
-      const url = URL.createObjectURL(file.blob); blobURLs.push(url);
-      const link = document.createElement('a'); link.href = url; link.download = file.name; link.textContent = file.name;
-      link.title = `Download ${file.name} (${byteSize(file.blob.size)})`; downloads.append(link);
+    article.append(head, summary);
+    if (result.options.combine) {
+      const provenance = document.createElement('p'); provenance.className = 'result-inputs';
+      provenance.textContent = `Combined inputs: ${result.inputs.map(input => input.name).join(' + ')}`;
+      const normalization = document.createElement('p'); normalization.className = 'result-summary';
+      const first = result.inputs[0];
+      const monitor = Number.isFinite(first?.monitor) ? ` (${first.monitor})` : '';
+      normalization.textContent = `Normalized to ${first?.name || 'the first input'}’s monitor${monitor}. The combined intensity is a normalized inverse-variance estimate, not a sum of raw counts. Its scale can resemble the first input; uncertainties reflect all contributing scans.`;
+      article.append(provenance, normalization);
     }
-    article.append(head, summary, downloads);
+    const priority = name => /\.gsas$/i.test(name) ? 0 : /\.dat$/i.test(name) ? 1 : /\.csv$/i.test(name) ? 2 : /\.json$/i.test(name) ? 3 : /\.npz$/i.test(name) ? 4 : 5;
+    const ordered = [...result.files].sort((a, b) => priority(a.name) - priority(b.name) || a.name.localeCompare(b.name));
+    const primary = ordered.filter(file => !/\.raw$/i.test(file.name));
+    const prepared = ordered.filter(file => /\.raw$/i.test(file.name));
+    function downloadLinks(files) {
+      const downloads = document.createElement('div'); downloads.className = 'downloads';
+      for (const file of files) {
+        const url = URL.createObjectURL(file.blob); blobURLs.push(url);
+        const link = document.createElement('a'); link.href = url; link.download = file.name;
+        link.textContent = /\.dat$/i.test(file.name) ? `${file.name} · FullProf` : file.name;
+        if (/\.(gsas|dat)$/i.test(file.name)) link.className = 'pattern-download';
+        link.title = `Download ${file.name} (${byteSize(file.blob.size)})`; downloads.append(link);
+      }
+      return downloads;
+    }
+    const primaryHeading = document.createElement('p'); primaryHeading.className = 'download-heading';
+    primaryHeading.textContent = result.options.combine ? 'Combined pattern & metadata' : 'Reduced patterns & metadata';
+    article.append(primaryHeading, downloadLinks(primary));
+    for (const item of result.summaries) {
+      const fullprof = item.fullprof;
+      if (!fullprof || typeof fullprof !== 'object') continue;
+      const note = document.createElement('p'); note.className = 'fullprof-note';
+      const format = fullprof.format || 'FullProf';
+      const instrument = Number.isFinite(fullprof.instrument_code) ? `INSTRM = ${fullprof.instrument_code}` : 'INSTRM not recorded';
+      const interpolation = fullprof.interpolation === 0 ? 'Interpol = 0 (no interpolation; INTER 1 1 0 0)'  : Number.isFinite(fullprof.interpolation) ? `Interpol = ${fullprof.interpolation}` : 'interpolation setting not recorded';
+      const points = Number.isSafeInteger(fullprof.points) ? `${fullprof.points} points` : 'point count not recorded';
+      const omitted = Number.isSafeInteger(fullprof.omitted_invalid_points) ? `${fullprof.omitted_invalid_points} invalid bins omitted` : 'omitted-bin count not recorded';
+      note.textContent = `${fullprof.filename || item.name}: ${format}, ${instrument}. Columns: 2θ (degrees), intensity, sigma. ${points}; ${omitted}. Explicit angles preserve gap positions; ${interpolation}.`;
+      article.append(note);
+    }
+    if (prepared.length) {
+      const details = document.createElement('details'); details.className = 'prepared-downloads';
+      const heading = document.createElement('summary'); heading.textContent = result.options.combine ? 'Prepared input files (not combined)' : 'Prepared input files';
+      const explanation = document.createElement('p'); explanation.className = 'result-summary';
+      explanation.textContent = result.options.combine ? 'Each RAW file contains one individual prepared scan. Use the combined pattern files above for the combined result.' : 'Each RAW file contains one prepared input before detector-bank reduction.';
+      details.append(heading, explanation, downloadLinks(prepared)); article.append(details);
+    }
     const warnings = [...new Set(result.summaries.flatMap(item => item.warnings || []))];
     if (warnings.length) {
       const details = document.createElement('details'); details.className = 'warning';
@@ -331,7 +375,7 @@ async function convertSelection(combine = false) {
   const converted = await request('convert', { files: selected.map(scan => ({ name: scan.name, bytes: scan.bytes })), options });
   const result = {
     id: crypto.randomUUID(), created: new Date().toISOString(), options,
-    inputs: selected.map(scan => ({ name: scan.name, sha256: scan.sha256, source: scan.source, temperature: temperature(scan).value, complete: scan.record.header.complete })),
+    inputs: selected.map(scan => ({ name: scan.name, sha256: scan.sha256, source: scan.source, temperature: temperature(scan).value, monitor: scan.record.header.monitor, complete: scan.record.header.complete })),
     summaries: converted.summaries,
     files: converted.downloads.map(file => ({ name: file.name, blob: new Blob([file.bytes], { type: 'application/octet-stream' }) })), cached: false,
   };
@@ -446,7 +490,7 @@ function setupHelpAndTabs() {
     original.parentNode.insertBefore(wrapper, original); wrapper.append(original, helpButton(label, text));
   }
   byId('combine-suggestions').querySelector('h3').append(helpButton('suggested combinations', 'Complete scans with matching recorded settings and detector calibration are grouped only when the full spread of measured scan means is at most 0.2 K. Review sample identity and within-scan drift. Selecting a suggestion never converts.'));
-  byId('results-heading').append(helpButton('output files', 'GSAS contains the uniform pattern; CSV retains pre-formatting values; JSON records provenance, masks and policies. BT-1 inputs also produce prepared RAW. Correct independent mode can additionally export conditional covariance as NPZ.'));
+  byId('results-heading').append(helpButton('output files', 'GSAS and FullProf DAT are pattern exports. FullProf XYDATA uses INSTRM = 10; its INTER 1 1 0 0 header sets Interpol = 0 (no interpolation), with explicit angle, intensity and sigma columns; invalid bins are omitted and counted. CSV retains pre-formatting values; JSON records provenance, masks and policies. BT-1 inputs also produce prepared RAW. Correct independent mode can additionally export conditional covariance as NPZ.'));
 }
 setupHelpAndTabs();
 
@@ -480,7 +524,16 @@ byId('files').onchange = () => run(async () => {
   } finally { byId('files').value = ''; }
 });
 byId('ncnr-load').onclick = () => run(fetchNCNR);
-byId('quick-convert').onclick = () => run(async () => { const loaded = await fetchNCNR(); if (!loaded.latestComplete) throw new Error('No complete scan is available in this experiment. Review the partial scans explicitly.'); await convertSelection(false); });
+byId('quick-convert').onclick = () => run(async () => {
+  const count = selectedScans().length;
+  if (count > 1) {
+    status(`You have ${count} scans selected. Use “Combine ${count} selected scans” or “Convert ${count} separately” below. The quick action converts one latest complete scan; your selection and results have been preserved.`, true);
+    return;
+  }
+  const loaded = await fetchNCNR();
+  if (!loaded.latestComplete) throw new Error('No complete scan is available in this experiment. Review the partial scans explicitly.');
+  await convertSelection(false);
+});
 byId('convert').onclick = () => run(() => convertSelection(false));
 byId('combine-selected').onclick = () => run(() => convertSelection(true));
 byId('select-all').onchange = event => { for (const scan of scans.values()) scan.selected = event.target.checked; renderScans(); };
