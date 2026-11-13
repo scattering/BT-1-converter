@@ -1,0 +1,63 @@
+name: Publish browser converter
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'browser/**'
+      - '!browser/**/*.md'
+      - 'bt1modern/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Test scan compatibility suggestions
+        run: node --test browser/test_compatibility.mjs
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Install verified Pyodide runtime
+        run: python browser/install_runtime.py
+      - name: Build static site
+        run: python browser/build_site.py
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -6,6 +6,12 @@ locations. Runtime code and tests were copied unchanged from the validated
 v0.3.0 release; [SOURCE_PROVENANCE.json](SOURCE_PROVENANCE.json) records their
 source and hashes.
 
+The converter also runs in a browser through a local Pyodide Web Worker. See
+[the browser UI, setup and validation notes](browser/README.md) for installation,
+direct NCNR retrieval, the static GitHub Pages build, and the measured parity
+results (including one recorded one-ULP difference in an optional uncertainty
+configuration). The Python scientific modules remain unchanged.
+
 Both **correct** and **legacy** modes execute entirely in Python and NumPy. No
 compiler, Fortran executable, subprocess, network or authentication is used for
 conversion. Compiled Fortran is used only as an independent regression-test
