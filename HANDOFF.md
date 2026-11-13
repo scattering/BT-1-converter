@@ -8,7 +8,9 @@ Work in `/Users/williamratcliff/bt1-converter`, the existing local Codex project
 not a new rewrite. It contains the validated v0.3.0 pure-Python port of
 PROPREP/GFORMAT. Read `AGENTS.md`, `README.md`, `PYTHON_MODES.md`, and
 `LOCAL_SETUP.md` before changing it. `SOURCE_PROVENANCE.json` records imported
-source hashes. Current baseline commit: `5f0e366` (relocation to user home).
+source hashes. Native scientific baseline commit: `5f0e366` (relocation to user
+home). The tested browser implementation is committed locally as `5cb0922`;
+the scientific modules remain unchanged from that baseline.
 The former `/Users/williamratcliff/Documents/Codex/bt1-converter` location is
 obsolete. The local environment was recreated after the move.
 
@@ -134,25 +136,37 @@ The public repository was empty at inspection, with `main` as default branch.
 
 Root configured GitHub Pages with `build_type: workflow`. Configured address:
 `https://scattering.github.io/BT-1-converter/`. **Publishing is pending; this is
-not yet an observed live deployment.** `.github/workflows/pages.yml` installs
-the verified runtime, builds a static artifact, uploads and deploys it.
+not yet an observed live deployment.** The implementation commit `5cb0922` is
+ready locally, but the initial push is blocked by locked 1Password SSH signing.
+Earlier read-only authentication/fetch succeeded; subsequent push/auth signing
+attempts failed while 1Password was locked. The user has been asked to unlock
+1Password and approve its existing GitHub key. Preserve the SSH remote and
+credentials; no remote rewrite or alternate authentication workaround is needed.
+
+`.github/workflows/pages.yml` runs grouping tests, installs the verified runtime,
+builds a static artifact, uploads and deploys it. It triggers on changes to
+`browser/` source (excluding Markdown), `bt1modern/`, or the workflow on `main`,
+and on manual dispatch. Documentation-only commits do not redeploy. The optional
+real-fixture grouping test skips in CI because local acquisition artifacts are
+not committed.
 `browser/build_site.py` includes only UI assets, scientific Python modules,
 browser adapter and pinned runtime, excluding fixtures/reports/acquisition
 archives. Public `build-info.json` records hashes without local source paths.
 
 ## Continue here
 
-1. Complete upload/partial-scan UI tests. Preserve the diagnosed one-ULP result
-   without changing scientific code or comparison thresholds merely to achieve
-   a green report.
-2. Rebuild with `.venv/bin/python browser/build_site.py` and preview `dist/` on a
-   loopback static server. The production config has relative URLs and disables
-   local validation/evidence endpoints.
-3. Root owns final commit/push to the authorized repository. Follow the SSH skill
-   checks; never force-push or expose credentials. Observe the Pages workflow
-   and test the resulting public site before reporting it as live.
-4. Record deployment URL/commit and final browser/cache checks in the docs and
-   durable ignored artifacts. Preserve the numerical mismatch and test omissions.
+1. After the user unlocks/approves 1Password, retry the authorized SSH push of
+   `main`. Root owns publishing and any final documentation commit. Follow the
+   SSH skill status/command checks; never force-push or expose credentials.
+2. Observe the Pages workflow through completion, then test the public site.
+   Local production-preview upload, partial-scan, combination, download, cache
+   reload, and suggestion-selection checks are already complete. The production
+   config uses relative URLs and disables local validation/evidence endpoints.
+3. Record the deployed commit/URL and observed public-site checks in the docs
+   and durable ignored artifacts. Replace the pending/auth-blocked status only
+   after observing success.
+4. Preserve the diagnosed one-ULP result and explicit test omissions. Do not
+   modify scientific algorithms or thresholds merely to make exact parity green.
 
 Exact installation/preparation/serving/build commands and scope details are in
 `browser/README.md`. The native baseline and browser evidence are distinct.

@@ -86,7 +86,11 @@ The connected repository is
 The configured Pages address is
 [https://scattering.github.io/BT-1-converter/](https://scattering.github.io/BT-1-converter/).
 **Pages is configured for GitHub Actions; the initial publication is pending.**
-Do not interpret this configured URL as evidence of a successful deployment.
+The tested implementation is committed locally as `5cb0922`. Publication is
+currently blocked because the locked 1Password SSH agent could not sign the
+GitHub push. The SSH remote and credentials have not been changed. Unlocking
+1Password and approving its existing GitHub key is the next action before
+retrying the push. This configured URL is not yet evidence of a live deployment.
 
 Build and preview the public artifact locally:
 
@@ -104,8 +108,13 @@ local path provenance. `dist/build-info.json` records public asset hashes and
 runtime provenance. An existing output directory is replaced only if it bears
 this builder's marker; unrelated directories are refused.
 
-`.github/workflows/pages.yml` builds and uploads `dist/` on pushes to `main` or
-manual workflow dispatch, then deploys through the `github-pages` environment.
+`.github/workflows/pages.yml` builds and uploads `dist/` on relevant source
+pushes to `main` or manual workflow dispatch, then deploys through the
+`github-pages` environment. Its path filter covers `browser/` source files,
+`bt1modern/`, and the workflow itself; Markdown-only documentation changes do
+not trigger deployment. Node's built-in test runner checks grouping behavior
+before the build. The optional real-fixture grouping test skips in CI because
+the local acquisition artifacts are deliberately excluded from Git.
 The public configuration disables local test/evidence endpoints. Conversion
 runs in each visitor's browser; NCNR retrieval requests go directly to NCNR.
 No server receives uploaded acquisition data.
