@@ -1,7 +1,7 @@
 # BT-1 reduction / Pyodide handoff
 
-Updated 2026-11-13 while adding per-scan cutoff controls. Earlier deployment
-evidence is retained below; the cutoff revision is not yet published.
+Updated 2026-11-13 after publishing per-scan cutoff controls as `4f2e374`.
+Earlier deployment evidence is retained below.
 
 ## Starting point
 
@@ -61,14 +61,27 @@ legacy 1.9°/1.9° combinations all produced 3288-point results with the request
 per-input settings. Incompatible legacy mixed grids failed without adding a
 result. Editing cutoffs preserved prior result snapshots.
 
-Downloaded correct mixed-cutoff and legacy same-cutoff CSVs are byte-identical
-to their native baselines. Their JSON preparation metadata, ordered source
-hashes, removed-point counts and output hashes passed all 12 checks per case:
-`artifacts/cutoff-browser-downloads-wrdhidx7/cutoff_mixed-comparison.json` and
-`cutoff_legacy-comparison.json`. The Mac locked during the final correct
-same-cutoff CSV save dialog; that download comparison and public deployment
-remain pending. The SSH agent currently lists no identities. Resume after Mac
-and 1Password unlock; preserve the existing SSH remote.
+Downloaded correct mixed-cutoff, correct same-cutoff and legacy same-cutoff
+CSVs are byte-identical to their native baselines. Their JSON preparation
+metadata, ordered source hashes, removed-point counts and output hashes passed
+all 12 checks per case: `artifacts/cutoff-browser-downloads-wrdhidx7/` contains
+`cutoff_mixed-comparison.json`, `cutoff_same-comparison.json` and
+`cutoff_legacy-comparison.json`.
+
+Cutoff implementation `4f2e374` was pushed over the existing SSH remote and
+published by successful [Pages run 43460284095](https://github.com/scattering/BT-1-converter/actions/runs/43460284095).
+The public build manifest matches the local build exactly; all 27 served
+application/Python/runtime assets match their recorded hashes and sizes, and
+all 17 source-derived assets match committed source. The two build-control
+dotfiles are not public application dependencies.
+
+Live GitHub Pages Chrome verification restored seven old scans with default
+1° cutoffs and converted Mn5Si001 separately at 1.9° in correct mode: 3288 valid
+points, one uniform bank and five output files, with the requested cutoff shown
+on the result. Screenshot: `artifacts/cutoff-release-browser.jpg`. This single
+case has UI evidence only: the Mac relocked during the extra CSV save attempt,
+so no single-result saved-file parity claim is made. The three combined saved
+results above provide the completed browser/native download comparisons.
 
 ## November 13 combination/download revision
 

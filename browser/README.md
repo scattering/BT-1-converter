@@ -132,12 +132,20 @@ The independent oracle audit passed 10 PROPREP RAW and 48 GFORMAT declared-array
 comparisons; the preparation/reduction kernels retain their release hashes.
 Chrome checks covered batch scope (including selected RAW), invalid drafts,
 per-scan edits, reload/NCNR-refresh persistence, new-scan defaults and correct/
-legacy combinations. Downloaded mixed-cutoff correct and same-cutoff legacy
-CSVs matched native output byte for byte, with requested per-input preparation
-metadata and unchanged source hashes. Evidence is in
+legacy combinations. Downloaded mixed-cutoff correct, same-cutoff correct and
+same-cutoff legacy CSVs matched native output byte for byte, with requested
+per-input preparation metadata and unchanged source hashes. Evidence is in
 `artifacts/cutoff-oracle-review-20261113/summary.json` and
-`artifacts/cutoff-browser-downloads-wrdhidx7/`. Publication remains pending Mac/
-SSH unlock; the earlier deployment records below describe the prior release.
+`artifacts/cutoff-browser-downloads-wrdhidx7/`.
+
+Revision `4f2e374` is published through successful
+[Pages run 43460284095](https://github.com/scattering/BT-1-converter/actions/runs/43460284095).
+The public manifest and all 27 served application/runtime assets match the local
+build. On the live site, Chrome also converted Mn5Si001 separately at 1.9° in
+correct mode: 3288 valid points, one uniform bank and five output files, with
+the cutoff displayed on the result. This last check is UI-only; the saved-file
+comparisons above cover the three combined cases. Screenshot:
+`artifacts/cutoff-release-browser.jpg`.
 
 ## Selecting scans and identifying combined results
 
