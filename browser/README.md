@@ -79,8 +79,12 @@ results. Keyboard users can move between tabs with arrow keys, Home and End.
 Field help buttons provide explanations such as M4 and uncertainty choices;
 Escape closes the open help. Local Chrome checks passed for direct
 `#documentation` navigation, keyboard/help interactions and switching tabs
-during a successful conversion. This help revision is not yet verified on the
-public site; the initial deployment results below remain a separate record.
+during a successful conversion. The help revision is now published as
+`bb745be` through
+[run 43362590637](https://github.com/scattering/BT-1-converter/actions/runs/43362590637).
+Public Chrome checks verified direct documentation navigation, both tabs,
+M4 help/Escape dismissal, and a completed Mn5Si006 conversion with 3300 points
+and four outputs. The initial deployment results below remain a separate record.
 
 The server binds only `127.0.0.1`, disables directory listings, and serves only
 the harness, Python modules/tests, runtime assets and validation inputs/reports.

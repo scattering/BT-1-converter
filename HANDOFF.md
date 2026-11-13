@@ -141,8 +141,13 @@ points/five outputs. Public-site reload restored seven inputs and two results
 The follow-up Workspace/Documentation tabs and accessible field help passed
 local Chrome checks: direct `#documentation` loading, arrow/Home/End navigation,
 help open/Escape close, and documentation access during runtime loading and
-conversion without losing workspace state. This follow-up UI is not yet
-verified publicly; the initial deployed version is recorded below.
+conversion without losing workspace state. This follow-up UI is now published
+as `bb745be` through
+[run 43362590637](https://github.com/scattering/BT-1-converter/actions/runs/43362590637).
+Public Chrome checks verified direct documentation navigation, tab controls,
+M4 help/Escape dismissal, and Mn5Si006 conversion (3300 points/four outputs).
+Screenshot: `artifacts/pyodide-validation/documentation-published.jpg`.
+The initial deployment record remains below.
 
 ## GitHub and publishing status
 
